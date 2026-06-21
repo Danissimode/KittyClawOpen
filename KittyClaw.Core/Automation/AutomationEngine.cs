@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using KittyClaw.Core.Automation.Runtimes;
 using KittyClaw.Core.Automation.Triggers;
 using KittyClaw.Core.Services;
 
@@ -21,6 +22,9 @@ public sealed class AutomationEngine : BackgroundService
         TriggerStateStore triggerState,
         SessionRegistry sessions,
         AgentRunRegistry runs,
+        IEnumerable<IAgentRuntime> runtimes,
+        IAgentPromptBuilder promptBuilder,
+        AgentRuntimeConfigLoader configLoader,
         ClaudeRunner runner,
         CostTracker cost,
         LocalizationService loc,
@@ -31,7 +35,7 @@ public sealed class AutomationEngine : BackgroundService
 
         _runtimeManager = new ProjectRuntimeManager(store, triggerState, logger);
         var runState = new RunStateManager(runs, cost, tickets, logger);
-        var executor = new ActionExecutor(tickets, members, labels, sessions, runs, runner, cost, loc, projects, runState, logger);
+        var executor = new ActionExecutor(tickets, members, labels, sessions, runs, runtimes, promptBuilder, configLoader, cost, loc, projects, runState, logger);
         _triggerHandler = new TriggerHandler(projects, _runtimeManager, executor, tickets, members, sessions, runs, logger);
 
         store.OnConfigChangedOnDisk += slug =>

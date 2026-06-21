@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
+using KittyClaw.Core.Automation.Runtimes;
 using KittyClaw.Core.Automation.Triggers;
 using KittyClaw.Core.Services;
 
@@ -16,7 +17,9 @@ internal sealed class ActionExecutor
     private readonly LabelService _labels;
     private readonly SessionRegistry _sessions;
     private readonly AgentRunRegistry _runs;
-    private readonly ClaudeRunner _runner;
+    private readonly IEnumerable<IAgentRuntime> _runtimes;
+    private readonly IAgentPromptBuilder _promptBuilder;
+    private readonly AgentRuntimeConfigLoader _configLoader;
     private readonly CostTracker _cost;
     private readonly LocalizationService _loc;
     private readonly ProjectService _projects;
@@ -36,6 +39,37 @@ internal sealed class ActionExecutor
         LabelService labels,
         SessionRegistry sessions,
         AgentRunRegistry runs,
+        IEnumerable<IAgentRuntime> runtimes,
+        IAgentPromptBuilder promptBuilder,
+        AgentRuntimeConfigLoader configLoader,
+        CostTracker cost,
+        LocalizationService loc,
+        ProjectService projects,
+        RunStateManager runState,
+        ILogger logger)
+    {
+        _tickets = tickets;
+        _members = members;
+        _labels = labels;
+        _sessions = sessions;
+        _runs = runs;
+        _runtimes = runtimes;
+        _promptBuilder = promptBuilder;
+        _configLoader = configLoader;
+        _cost = cost;
+        _loc = loc;
+        _projects = projects;
+        _runState = runState;
+        _logger = logger;
+    }
+
+    // Backward-compatible constructor for tests and legacy code paths.
+    public ActionExecutor(
+        TicketService tickets,
+        MemberService members,
+        LabelService labels,
+        SessionRegistry sessions,
+        AgentRunRegistry runs,
         ClaudeRunner runner,
         CostTracker cost,
         LocalizationService loc,
@@ -48,12 +82,24 @@ internal sealed class ActionExecutor
         _labels = labels;
         _sessions = sessions;
         _runs = runs;
-        _runner = runner;
+        _runtimes = new[] { new ClaudeCodeRuntime(runner) };
+        _promptBuilder = new PromptBuilder();
+        _configLoader = new BackwardCompatConfigLoader();
         _cost = cost;
         _loc = loc;
         _projects = projects;
         _runState = runState;
         _logger = logger;
+    }
+
+    private sealed class BackwardCompatConfigLoader : AgentRuntimeConfigLoader
+    {
+        public BackwardCompatConfigLoader() : base("") { }
+
+        public override AgentRuntimeProjectConfig CreateDefault(string projectSlug, string workspacePath, string defaultRuntime = "mimo-code")
+        {
+            return base.CreateDefault(projectSlug, workspacePath, defaultRuntime: "claude-code");
+        }
     }
 
     // ── Condition evaluation ────────────────────────────────────────────────
@@ -325,34 +371,159 @@ internal sealed class ActionExecutor
 
         if (await _runState.ShouldSkipAsync(rt, a, firing, agentName, group)) return (true, null, agentName);
 
-        var project = await _projects.GetProjectAsync(rt.Slug);
-        var fallbackModel = project?.FallbackModel;
+        var ticket = firing.TicketId is not null
+            ? await _tickets.GetTicketAsync(rt.Slug, firing.TicketId.Value)
+            : null;
+        var labels = ticket?.Labels.Select(l => l.Name).ToList() ?? new List<string>();
 
-        var runCtx = new ClaudeRunContext
+        var config = _configLoader.Load(rt.Slug, rt.Workspace!) ?? _configLoader.CreateDefault(rt.Slug, rt.Workspace!);
+        var router = new AgentRuntimeRouter(config, _runtimes);
+        var runtime = router.Resolve(agentName);
+
+        var isHighRisk = router.IsHighRisk(labels);
+        var prompt = _promptBuilder.BuildPrompt(new AgentRunRequest(
+            ProjectSlug: rt.Slug,
+            WorkspacePath: rt.Workspace!,
+            TicketId: firing.TicketId,
+            TicketTitle: firing.TicketTitle ?? "",
+            TicketDescription: ticket?.Description,
+            Labels: labels,
+            Assignee: agentName,
+            CurrentColumn: firing.TicketStatus,
+            Prompt: "", // built below after config resolution
+            RuntimeConfig: config.Runtimes.TryGetValue(runtime.Id, out var rc) ? rc : new AgentRuntimeConfig
+            {
+                Id = runtime.Id,
+                Enabled = true,
+                Command = runtime.Id,
+            }
+        ));
+
+        var runtimeConfig = config.Runtimes.TryGetValue(runtime.Id, out var rconf) ? rconf : new AgentRuntimeConfig
         {
-            ProjectSlug = rt.Slug,
-            WorkspacePath = rt.Workspace!,
-            AgentName = agentName,
-            SkillFile = skillFile,
-            TicketId = firing.TicketId,
-            TicketTitle = firing.TicketTitle,
-            TicketStatus = firing.TicketStatus,
+            Id = runtime.Id,
+            Enabled = true,
+            Command = runtime.Id,
             MaxTurns = a.MaxTurns,
             ConcurrencyGroup = group,
-            Env = a.Env,
-            Model = a.Model,
-            FallbackModel = fallbackModel,
-            ExtraContext = a.Context,
-            RetryOnResumeFailure = true,
         };
+
+        // Overlay action-specific settings
+        runtimeConfig = new AgentRuntimeConfig
+        {
+            Id = runtimeConfig.Id,
+            Enabled = runtimeConfig.Enabled,
+            Command = runtimeConfig.Command,
+            Args = runtimeConfig.Args,
+            PromptMode = runtimeConfig.PromptMode,
+            TimeoutSeconds = runtimeConfig.TimeoutSeconds,
+            Experimental = runtimeConfig.Experimental,
+            WorkingDirectoryOverride = runtimeConfig.WorkingDirectoryOverride,
+            Model = a.Model ?? runtimeConfig.Model,
+            Agent = runtimeConfig.Agent,
+            OutputFormat = runtimeConfig.OutputFormat,
+            DangerouslySkipPermissions = runtimeConfig.DangerouslySkipPermissions,
+            Environment = a.Env.Count > 0 ? a.Env : runtimeConfig.Environment,
+            MaxTurns = a.MaxTurns > 0 ? a.MaxTurns : runtimeConfig.MaxTurns,
+            ConcurrencyGroup = group,
+        };
+
+        var request = new AgentRunRequest(
+            ProjectSlug: rt.Slug,
+            WorkspacePath: rt.Workspace!,
+            TicketId: firing.TicketId,
+            TicketTitle: firing.TicketTitle ?? "",
+            TicketDescription: ticket?.Description,
+            Labels: labels,
+            Assignee: agentName,
+            CurrentColumn: firing.TicketStatus,
+            Prompt: prompt,
+            RuntimeConfig: runtimeConfig
+        );
+
+        var runId = Guid.NewGuid().ToString("N");
+        var run = new AgentRun
+        {
+            RunId = runId,
+            ProjectSlug = rt.Slug,
+            TicketId = firing.TicketId,
+            AgentName = agentName,
+            SkillFile = skillFile,
+            ConcurrencyGroup = group,
+            StartedAt = DateTime.UtcNow,
+        };
+        _runs.Register(run);
         _sessions.SetLastDispatched(rt.Workspace!, agentName, DateTime.UtcNow);
         if (firing.TicketId is not null)
         {
             try { await _tickets.AddActivityAsync(rt.Slug, firing.TicketId.Value, _loc.Get("ActAgentStarted", agentName), "automation"); }
             catch { /* non-blocking */ }
+
+            // Move Ready → InProgress before execution.
+            try
+            {
+                var ticket = await _tickets.GetTicketAsync(rt.Slug, firing.TicketId.Value);
+                if (ticket is not null && string.Equals(ticket.Status, "Ready", StringComparison.OrdinalIgnoreCase))
+                {
+                    await _tickets.MoveTicketAsync(rt.Slug, firing.TicketId.Value, "InProgress", "automation");
+                    _logger.LogInformation("Moved ticket #{Id} from Ready to InProgress before run", firing.TicketId.Value);
+                }
+            }
+            catch (Exception ex) { _logger.LogWarning(ex, "Pre-run status transition failed for ticket #{Id}", firing.TicketId); }
         }
 
-        return (false, _runner.RunAsync(runCtx, ct), agentName);
+        // Fire-and-forget wrapper: starts the runtime, updates the local AgentRun, and returns it.
+        var runTask = Task.Run(async () =>
+        {
+            try
+            {
+                var req = request with { RunId = runId };
+                var result = await runtime.RunAsync(req, ct);
+
+                // Resolve the canonical run (ClaudeRunner may have replaced ours in the registry).
+                var canonicalRun = _runs.Get(runId) ?? run;
+                if (canonicalRun.Status == AgentRunStatus.Running)
+                {
+                    canonicalRun.Status = result.Status;
+                    canonicalRun.ExitCode = result.ExitCode;
+                    canonicalRun.EndedAt = result.FinishedAt.UtcDateTime;
+                    canonicalRun.RuntimeId = result.RuntimeId;
+                    canonicalRun.CommandDisplay = result.CommandDisplay;
+                    if (!string.IsNullOrEmpty(result.Stdout))
+                        canonicalRun.Push(new StreamEvent(result.StartedAt.UtcDateTime, "stdout", result.Stdout));
+                    if (!string.IsNullOrEmpty(result.Stderr))
+                        canonicalRun.Push(new StreamEvent(result.StartedAt.UtcDateTime, "stderr", result.Stderr));
+                    _runs.Complete(runId, result.Status, result.ExitCode);
+                }
+                return canonicalRun;
+            }
+            catch (OperationCanceledException)
+            {
+                var canonicalRun = _runs.Get(runId) ?? run;
+                if (canonicalRun.Status == AgentRunStatus.Running)
+                {
+                    canonicalRun.Status = AgentRunStatus.Stopped;
+                    canonicalRun.EndedAt = DateTime.UtcNow;
+                    _runs.Complete(runId, AgentRunStatus.Stopped, null);
+                }
+                return canonicalRun;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "runAgent {Agent} crashed for ticket #{Id}", agentName, firing.TicketId);
+                var canonicalRun = _runs.Get(runId) ?? run;
+                if (canonicalRun.Status == AgentRunStatus.Running)
+                {
+                    canonicalRun.Status = AgentRunStatus.Failed;
+                    canonicalRun.EndedAt = DateTime.UtcNow;
+                    canonicalRun.ExitCode = -1;
+                    _runs.Complete(runId, AgentRunStatus.Failed, -1);
+                }
+                return canonicalRun;
+            }
+        }, ct);
+
+        return (false, runTask, agentName);
     }
 
     private async Task HandleRunCompletionAsync(
@@ -394,6 +565,42 @@ internal sealed class ActionExecutor
             };
             try { await _tickets.AddActivityAsync(rt.Slug, firing.TicketId.Value, _loc.Get(statusKey, agentName), "automation"); }
             catch { /* non-blocking */ }
+
+            // Automatic status transitions based on run outcome.
+            try
+            {
+                var ticket = await _tickets.GetTicketAsync(rt.Slug, firing.TicketId.Value);
+                if (ticket is not null)
+                {
+                    var labels = ticket.Labels.Select(l => l.Name).ToList();
+                    var config = _configLoader.Load(rt.Slug, rt.Workspace!) ?? _configLoader.CreateDefault(rt.Slug, rt.Workspace!);
+                    var router = new AgentRuntimeRouter(config, _runtimes);
+                    var isHighRisk = router.IsHighRisk(labels);
+
+                    if (isHighRisk)
+                    {
+                        await _tickets.AddCommentAsync(rt.Slug, firing.TicketId.Value, "High-risk ticket: human review required.", "automation");
+                    }
+
+                    if (run.Status == AgentRunStatus.Completed && run.ExitCode == 0)
+                    {
+                        if (string.Equals(ticket.Status, "InProgress", StringComparison.OrdinalIgnoreCase))
+                        {
+                            await _tickets.MoveTicketAsync(rt.Slug, firing.TicketId.Value, "Review", "automation");
+                            _logger.LogInformation("Moved ticket #{Id} to Review after successful run", firing.TicketId.Value);
+                        }
+                    }
+                    else if (run.Status == AgentRunStatus.Failed)
+                    {
+                        if (string.Equals(ticket.Status, "InProgress", StringComparison.OrdinalIgnoreCase))
+                        {
+                            await _tickets.MoveTicketAsync(rt.Slug, firing.TicketId.Value, "Blocked", "automation");
+                            _logger.LogInformation("Moved ticket #{Id} to Blocked after failed run", firing.TicketId.Value);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex) { _logger.LogWarning(ex, "Status transition failed for ticket #{Id}", firing.TicketId); }
         }
 
         if (spec.RestoreStatusOnFail
@@ -621,29 +828,64 @@ internal sealed class ActionExecutor
             const string scope = "consolidate";
             _sessions.Clear(rt.Workspace!, $"{scope}:{agent}", ticketId: null);
 
-            var runCtx = new ClaudeRunContext
+            var config = _configLoader.Load(rt.Slug, rt.Workspace!) ?? _configLoader.CreateDefault(rt.Slug, rt.Workspace!);
+            var router = new AgentRuntimeRouter(config, _runtimes);
+            var runtime = router.Resolve(agent);
+
+            var runId = Guid.NewGuid().ToString("N");
+            var request = new AgentRunRequest(
+                ProjectSlug: rt.Slug,
+                WorkspacePath: rt.Workspace!,
+                TicketId: null,
+                TicketTitle: "Consolidate memory",
+                TicketDescription: null,
+                Labels: Array.Empty<string>(),
+                Assignee: agent,
+                CurrentColumn: null,
+                Prompt: string.IsNullOrWhiteSpace(eventsSummary) ? "No events were recorded for this run." : eventsSummary,
+                RuntimeConfig: new AgentRuntimeConfig
+                {
+                    Id = runtime.Id,
+                    Enabled = true,
+                    Command = runtime.Id,
+                    MaxTurns = spec.MaxTurns,
+                    SessionScope = scope,
+                    InlineSkillContent = instructionContent,
+                    ConcurrencyGroup = $"consolidate-{agent}",
+                },
+                RunId: runId
+            );
+
+            var run = new AgentRun
             {
+                RunId = runId,
                 ProjectSlug = rt.Slug,
-                WorkspacePath = rt.Workspace!,
+                TicketId = null,
                 AgentName = agent,
                 SkillFile = $"{agent}/SKILL.md",
-                MaxTurns = spec.MaxTurns,
                 ConcurrencyGroup = $"consolidate-{agent}",
-                InlineSkillContent = instructionContent,
-                ExtraContext = string.IsNullOrWhiteSpace(eventsSummary)
-                    ? "No events were recorded for this run."
-                    : eventsSummary,
-                SessionScope = scope,
-                Model = null,
+                StartedAt = DateTime.UtcNow,
             };
+            _runs.Register(run);
 
-            var run = await _runner.RunAsync(runCtx, ct);
+            var result = await runtime.RunAsync(request, ct);
+
+            var canonicalRun = _runs.Get(runId) ?? run;
+            if (canonicalRun.Status == AgentRunStatus.Running)
+            {
+                canonicalRun.Status = result.Status;
+                canonicalRun.ExitCode = result.ExitCode;
+                canonicalRun.EndedAt = result.FinishedAt.UtcDateTime;
+                canonicalRun.RuntimeId = result.RuntimeId;
+                canonicalRun.CommandDisplay = result.CommandDisplay;
+                _runs.Complete(runId, result.Status, result.ExitCode);
+            }
 
             var memoryPaths = $"\".agents/{agent}/memory\" \".agents/{agent}/memory.md\"";
             var diff = await RunGitAsync(rt.Workspace!, $"diff --shortstat HEAD -- {memoryPaths}");
             var diffSummary = diff.stdout.Trim();
             _logger.LogInformation("consolidate {Agent}: run {Status} (exit {Exit}){Diff}",
-                agent, run.Status, run.ExitCode,
+                agent, canonicalRun.Status, canonicalRun.ExitCode,
                 string.IsNullOrWhiteSpace(diffSummary) ? "" : $" — {diffSummary}");
         }
         catch (Exception ex)

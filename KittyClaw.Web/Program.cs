@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using KittyClaw.Core.Automation;
+using KittyClaw.Core.Automation.Runtimes;
 using KittyClaw.Core.Services;
 using KittyClaw.Web.Api;
 using KittyClaw.Web.Components;
@@ -63,6 +64,29 @@ builder.Services.AddSingleton<AgentRunRegistry>(sp => new AgentRunRegistry(sp.Ge
 // KITTYCLAW_MAX_CONCURRENT_AGENTS env var if 3 is too tight or too loose for the host.
 var maxConcurrent = int.TryParse(Environment.GetEnvironmentVariable("KITTYCLAW_MAX_CONCURRENT_AGENTS"), out var mc) && mc > 0 ? mc : 3;
 builder.Services.AddSingleton(new RunConcurrencyGate(maxConcurrent));
+
+// Runtime config
+builder.Services.AddSingleton<AgentRuntimeConfigLoader>(sp => new AgentRuntimeConfigLoader(dataDir));
+builder.Services.AddSingleton(sp =>
+{
+    var loader = sp.GetRequiredService<AgentRuntimeConfigLoader>();
+    return loader.Load("petpals") ?? loader.CreateDefault("petpals", "/Users/danissimode/Documents/GitHub/PetPalsCursor");
+});
+
+// Runtimes (all implement IAgentRuntime)
+builder.Services.AddSingleton<ProcessRunner>();
+builder.Services.AddSingleton<IAgentRuntime, ClaudeCodeRuntime>();
+builder.Services.AddSingleton<IAgentRuntime, MimoCodeRuntime>();
+builder.Services.AddSingleton<IAgentRuntime, ScriptRuntime>();
+builder.Services.AddSingleton<IAgentRuntime, OpenCodeRuntime>();
+builder.Services.AddSingleton<IAgentRuntime, CodexRuntime>();
+builder.Services.AddSingleton<IAgentRuntime, GitHubCopilotRuntime>();
+builder.Services.AddSingleton<IAgentRuntime, AntigravityRuntime>();
+
+builder.Services.AddSingleton<AgentRuntimeRouter>();
+builder.Services.AddSingleton<IAgentPromptBuilder, PromptBuilder>();
+
+// Keep ClaudeRunner for backward compat (used by ClaudeCodeRuntime)
 builder.Services.AddSingleton<ClaudeRunner>();
 builder.Services.AddSingleton<CostTracker>();
 builder.Services.AddSingleton<AutomationEngine>();

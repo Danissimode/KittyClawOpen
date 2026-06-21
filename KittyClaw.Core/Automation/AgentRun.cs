@@ -19,6 +19,8 @@ public sealed class AgentRun
     public string? SessionId { get; set; }
     public string? Model { get; set; }
     public string? ChatTarget { get; set; }
+    public string? RuntimeId { get; set; }
+    public string? CommandDisplay { get; set; }
     public AgentRunStatus Status { get; set; } = AgentRunStatus.Running;
     public DateTime? EndedAt { get; set; }
     public int? ExitCode { get; set; }
@@ -81,6 +83,8 @@ public sealed class AgentRunSnapshot
     public DateTime? EndedAt { get; set; }
     public string? SessionId { get; set; }
     public string? Model { get; set; }
+    public string? RuntimeId { get; set; }
+    public string? CommandDisplay { get; set; }
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public AgentRunStatus Status { get; set; }
     public int? ExitCode { get; set; }
@@ -118,6 +122,8 @@ public sealed class RunLogStore
             EndedAt = run.EndedAt,
             SessionId = run.SessionId,
             Model = run.Model,
+            RuntimeId = run.RuntimeId,
+            CommandDisplay = run.CommandDisplay,
             Status = run.Status,
             ExitCode = run.ExitCode,
             Events = run.SnapshotBuffer().ToList(),
@@ -159,6 +165,8 @@ public sealed class RunLogStore
             };
             run.SessionId = snapshot.SessionId;
             run.Model = snapshot.Model;
+            run.RuntimeId = snapshot.RuntimeId;
+            run.CommandDisplay = snapshot.CommandDisplay;
             run.Status = snapshot.Status;
             run.EndedAt = snapshot.EndedAt;
             run.ExitCode = snapshot.ExitCode;

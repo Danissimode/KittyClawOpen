@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+APP_NAME="KittyClawOpen"
+SUPPORT_DIR="$HOME/Library/Application Support/KittyClawOpen"
+LOG_DIR="$HOME/Library/Logs/KittyClawOpen"
+PID_FILE="$SUPPORT_DIR/kittyclawopen.pid"
+mkdir -p "$SUPPORT_DIR" "$LOG_DIR"
+
+# If localhost:5230 is already listening, do not start another backend.
+if lsof -iTCP:5230 -sTCP:LISTEN >/dev/null 2>&1; then
+  open "http://localhost:8080" || open "http://localhost:5230"
+  exit 0
+fi
+
+# Resolve install/repo path.
+REPO_DIR="${KITTYCLAWOPEN_HOME:-$HOME/Documents/GitHub/KittyClawOpen}"
+if [ ! -d "$REPO_DIR" ]; then
+  osascript -e 'display dialog "KittyClawOpen repo not found. Set KITTYCLAWOPEN_HOME or install the app from the repository." buttons {"OK"} default button "OK"'
+  exit 1
+fi
+
+cd "$REPO_DIR"
+
+# Start backend.
+nohup dotnet run --project KittyClaw.Web/KittyClaw.Web.csproj > "$LOG_DIR/backend.log" 2>&1 &
+echo $! > "$PID_FILE"
+
+# Give the server a moment to boot.
+sleep 3
+
+# Open UI.
+if lsof -iTCP:8080 -sTCP:LISTEN >/dev/null 2>&1; then
+  open "http://localhost:8080"
+else
+  open "http://localhost:5230"
+fi
