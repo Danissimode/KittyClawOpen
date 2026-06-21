@@ -6,6 +6,11 @@ LOG_DIR="$HOME/Library/Logs/KittyClawOpen"
 PID_FILE="$SUPPORT_DIR/kittyclawopen.pid"
 mkdir -p "$SUPPORT_DIR" "$LOG_DIR"
 
+# Ensure dotnet is in PATH. macOS .app bundles don't inherit shell PATH.
+if [ -d "/usr/local/share/dotnet" ] && [[ ":$PATH:" != *":/usr/local/share/dotnet:"* ]]; then
+  export PATH="/usr/local/share/dotnet:$PATH"
+fi
+
 # If localhost:5230 is already listening, do not start another backend.
 if lsof -iTCP:5230 -sTCP:LISTEN >/dev/null 2>&1; then
   open "http://localhost:8080" || open "http://localhost:5230"
@@ -19,14 +24,30 @@ if [ ! -d "$REPO_DIR" ]; then
   exit 1
 fi
 
+# Verify dotnet is available
+if ! command -v dotnet >/dev/null 2>&1; then
+  osascript -e 'display dialog "dotnet SDK not found. Please install .NET SDK 10 or set PATH to include dotnet." buttons {"OK"} default button "OK"'
+  exit 1
+fi
+
 cd "$REPO_DIR"
 
 # Start backend.
 nohup dotnet run --project KittyClaw.Web/KittyClaw.Web.csproj > "$LOG_DIR/backend.log" 2>&1 &
 echo $! > "$PID_FILE"
 
-# Give the server a moment to boot.
-sleep 3
+# Poll for server startup (cold build can take 20-60s)
+MAX_WAIT=60
+WAITED=0
+echo "Waiting for KittyClawOpen to start..."
+while ! lsof -iTCP:5230 -sTCP:LISTEN >/dev/null 2>&1; do
+  sleep 2
+  WAITED=$((WAITED + 2))
+  if [ $WAITED -ge $MAX_WAIT ]; then
+    osascript -e 'display dialog "KittyClawOpen failed to start within 60 seconds. Check logs in ~/Library/Logs/KittyClawOpen/" buttons {"OK"} default button "OK"'
+    exit 1
+  fi
+done
 
 # Open UI.
 if lsof -iTCP:8080 -sTCP:LISTEN >/dev/null 2>&1; then
