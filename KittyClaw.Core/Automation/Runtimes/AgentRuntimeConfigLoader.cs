@@ -82,6 +82,8 @@ public sealed class AgentRuntimeConfigLoader
                 { "opencode", "opencode" },
                 { "qa", "script" },
                 { "copilot", "github-copilot" },
+                { "vibe", "vibe" },
+                { "kimi", "kimi-code" },
                 { "antigravity", "antigravity" },
             },
             Runtimes = new Dictionary<string, AgentRuntimeConfig>(StringComparer.OrdinalIgnoreCase)
@@ -120,6 +122,35 @@ public sealed class AgentRuntimeConfigLoader
                         Args = new[] { "exec" },
                         PromptMode = PromptMode.Argument,
                         TimeoutSeconds = 1800,
+                        Experimental = true,
+                    }
+                },
+                {
+                    "vibe", new AgentRuntimeConfig
+                    {
+                        Id = "vibe",
+                        Enabled = false,
+                        Command = "vibe",
+                        Args = new[] { "--prompt" },
+                        PromptMode = PromptMode.Argument,
+                        OutputFormat = "json",
+                        Agent = "plan",
+                        TimeoutSeconds = 1800,
+                        AllowAutoApprove = false,
+                        Experimental = true,
+                    }
+                },
+                {
+                    "kimi-code", new AgentRuntimeConfig
+                    {
+                        Id = "kimi-code",
+                        Enabled = false,
+                        Command = "kimi",
+                        Args = new[] { "-p" },
+                        PromptMode = PromptMode.Argument,
+                        OutputFormat = "stream-json",
+                        TimeoutSeconds = 1800,
+                        AllowAutoApprove = false,
                         Experimental = true,
                     }
                 },

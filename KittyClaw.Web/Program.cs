@@ -82,6 +82,8 @@ builder.Services.AddSingleton<IAgentRuntime, OpenCodeRuntime>();
 builder.Services.AddSingleton<IAgentRuntime, CodexRuntime>();
 builder.Services.AddSingleton<IAgentRuntime, GitHubCopilotRuntime>();
 builder.Services.AddSingleton<IAgentRuntime, AntigravityRuntime>();
+builder.Services.AddSingleton<IAgentRuntime, VibeRuntime>();
+builder.Services.AddSingleton<IAgentRuntime, KimiCodeRuntime>();
 
 builder.Services.AddSingleton<AgentRuntimeRouter>();
 builder.Services.AddSingleton<IAgentPromptBuilder, PromptBuilder>();

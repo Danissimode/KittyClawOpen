@@ -8,5 +8,8 @@ public static class AgentRuntimeIds
     public const string Codex = "codex";
     public const string GitHubCopilot = "github-copilot";
     public const string Antigravity = "antigravity";
+    public const string Vibe = "vibe";
+    public const string KimiCode = "kimi-code";
     public const string Script = "script";
 }
+

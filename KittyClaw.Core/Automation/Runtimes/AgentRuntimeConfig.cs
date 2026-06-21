@@ -14,6 +14,7 @@ public sealed class AgentRuntimeConfig
     public string? Agent { get; init; }
     public string? OutputFormat { get; init; } = "json";
     public bool DangerouslySkipPermissions { get; init; } = false;
+    public bool AllowAutoApprove { get; init; } = false;
     public int MaxTurns { get; init; } = 200;
     public string? SessionScope { get; init; }
     public string? InlineSkillContent { get; init; }
