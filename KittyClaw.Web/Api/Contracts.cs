@@ -3,8 +3,8 @@ using KittyClaw.Core.Models;
 namespace KittyClaw.Web.Api;
 
 public record CreateProjectRequest(string Name);
-public record CreateTicketRequest(string Title, string CreatedBy, string Status, string Description = "", List<int>? LabelIds = null, TicketPriority Priority = TicketPriority.NiceToHave, string? AssignedTo = null, int? ParentId = null, string? CliRuntimeId = null, string? CaoRoleId = null, string? ModelProfileId = null);
-public record UpdateTicketRequest(string Author, string? Title = null, string? Description = null, TicketPriority? Priority = null, string? AssignedTo = null, List<int>? LabelIds = null, string? CliRuntimeId = null, string? CaoRoleId = null, string? ModelProfileId = null);
+public record CreateTicketRequest(string Title, string CreatedBy, string Status, string Description = "", List<int>? LabelIds = null, TicketPriority Priority = TicketPriority.NiceToHave, string? AssignedTo = null, int? ParentId = null, string? CliRuntimeId = null, string? CaoRoleId = null, string? ModelProfileId = null, string? RiskLevel = null, string? Reviewer = null, string? RequiredEvidence = null);
+public record UpdateTicketRequest(string Author, string? Title = null, string? Description = null, TicketPriority? Priority = null, string? AssignedTo = null, List<int>? LabelIds = null, string? CliRuntimeId = null, string? CaoRoleId = null, string? ModelProfileId = null, string? RiskLevel = null, string? Reviewer = null, string? RequiredEvidence = null);
 public record MoveTicketRequest(string Status, string Author);
 public record AddCommentRequest(string Content, string Author);
 public record UpdateCommentRequest(string Content, string Author);

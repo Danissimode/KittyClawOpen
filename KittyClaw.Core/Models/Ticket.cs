@@ -12,6 +12,9 @@ public class Ticket
     public string? CliRuntimeId { get; set; }
     public string? CaoRoleId { get; set; }
     public string? ModelProfileId { get; set; }
+    public string? RiskLevel { get; set; }
+    public string? Reviewer { get; set; }
+    public string? RequiredEvidence { get; set; }
     public string CreatedBy { get; set; } = "owner";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

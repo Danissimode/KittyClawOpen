@@ -21,6 +21,9 @@ public record TicketSummary(
     public string? CliRuntimeId { get; init; }
     public string? CaoRoleId { get; init; }
     public string? ModelProfileId { get; init; }
+    public string? RiskLevel { get; init; }
+    public string? Reviewer { get; init; }
+    public string? RequiredEvidence { get; init; }
 }
 
 public record SubTicketInfo(int Id, string Title, string Status, string? AssignedTo);

@@ -4459,3 +4459,113 @@ details[open] .tool-call-summary::before { transform: rotate(90deg); }
     border-radius: 4px;
     margin-bottom: 4px;
 }
+
+/* ── Orchestration badges ── */
+.orchestration-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}
+.orch-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.7rem;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--surface3);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    white-space: nowrap;
+}
+.orch-badge--runtime { background: rgba(59, 130, 246, 0.12); color: #60a5fa; border-color: rgba(59, 130, 246, 0.25); }
+.orch-badge--role { background: rgba(168, 85, 247, 0.12); color: #c084fc; border-color: rgba(168, 85, 247, 0.25); }
+.orch-badge--model { background: rgba(34, 197, 94, 0.12); color: #4ade80; border-color: rgba(34, 197, 94, 0.25); }
+.orch-badge--risk-low { background: rgba(34, 197, 94, 0.12); color: #4ade80; border-color: rgba(34, 197, 94, 0.25); }
+.orch-badge--risk-medium { background: rgba(234, 179, 8, 0.12); color: #facc15; border-color: rgba(234, 179, 8, 0.25); }
+.orch-badge--risk-high { background: rgba(249, 115, 22, 0.12); color: #fb923c; border-color: rgba(249, 115, 22, 0.25); }
+.orch-badge--risk-critical { background: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239, 68, 68, 0.3); }
+
+/* ── Orchestration section in ticket panel ── */
+.orch-section {
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--surface);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+}
+.orch-section-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.4rem;
+}
+.orch-field {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.3rem;
+    font-size: 0.85rem;
+}
+.orch-field-label {
+    color: var(--text-muted);
+    min-width: 100px;
+    font-size: 0.8rem;
+}
+.orch-field-value {
+    color: var(--text);
+    font-weight: 500;
+}
+
+/* ── Create popup orchestration fields ── */
+.orch-select {
+    width: 100%;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface2);
+    color: var(--text);
+    font-size: 0.85rem;
+    outline: none;
+}
+.orch-select:focus { border-color: var(--accent); }
+.orch-textarea {
+    width: 100%;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface2);
+    color: var(--text);
+    font-size: 0.85rem;
+    outline: none;
+    min-height: 60px;
+    resize: vertical;
+}
+.orch-textarea:focus { border-color: var(--accent); }
+
+/* ── Evidence checklist ── */
+.evidence-checklist {
+    margin-top: 0.5rem;
+}
+.evidence-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    padding: 0.2rem 0;
+}
+.evidence-checkbox {
+    width: 14px;
+    height: 14px;
+    accent-color: var(--accent);
+}
+.evidence-label {
+    color: var(--text);
+}
+.evidence-label--done {
+    text-decoration: line-through;
+    color: var(--text-dim);
+}

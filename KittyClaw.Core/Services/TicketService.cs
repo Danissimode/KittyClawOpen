@@ -92,6 +92,12 @@ public class TicketService
         catch { /* column already exists */ }
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Tickets ADD COLUMN ModelProfileId TEXT NULL"); }
         catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Tickets ADD COLUMN RiskLevel TEXT NULL"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Tickets ADD COLUMN Reviewer TEXT NULL"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Tickets ADD COLUMN RequiredEvidence TEXT NULL"); }
+        catch { /* column already exists */ }
     }
 
     public async Task<List<TicketSummary>> ListTicketsAsync(string projectSlug, string? statusFilter = null, TicketPriority? priorityFilter = null, string? assignedTo = null, string? createdBy = null, string? search = null, int? parentId = null)
@@ -131,7 +137,10 @@ public class TicketService
             {
                 CliRuntimeId = t.CliRuntimeId,
                 CaoRoleId = t.CaoRoleId,
-                ModelProfileId = t.ModelProfileId
+                ModelProfileId = t.ModelProfileId,
+                RiskLevel = t.RiskLevel,
+                Reviewer = t.Reviewer,
+                RequiredEvidence = t.RequiredEvidence
             })
             .ToListAsync();
 
@@ -175,7 +184,7 @@ public class TicketService
         return ticket;
     }
 
-    public async Task<Ticket> CreateTicketAsync(string projectSlug, string title, string description = "", string createdBy = "owner", string status = "Backlog", List<int>? labelIds = null, TicketPriority priority = TicketPriority.NiceToHave, string? assignedTo = null, int? parentId = null, string? cliRuntimeId = null, string? caoRoleId = null, string? modelProfileId = null)
+    public async Task<Ticket> CreateTicketAsync(string projectSlug, string title, string description = "", string createdBy = "owner", string status = "Backlog", List<int>? labelIds = null, TicketPriority priority = TicketPriority.NiceToHave, string? assignedTo = null, int? parentId = null, string? cliRuntimeId = null, string? caoRoleId = null, string? modelProfileId = null, string? riskLevel = null, string? reviewer = null, string? requiredEvidence = null)
     {
         if (string.IsNullOrWhiteSpace(createdBy))
             throw new InvalidOperationException("Le champ 'createdBy' est requis.");
@@ -206,7 +215,10 @@ public class TicketService
             ParentId = parentId,
             CliRuntimeId = cliRuntimeId,
             CaoRoleId = caoRoleId,
-            ModelProfileId = modelProfileId
+            ModelProfileId = modelProfileId,
+            RiskLevel = riskLevel,
+            Reviewer = reviewer,
+            RequiredEvidence = requiredEvidence
         };
         if (labelIds is { Count: > 0 })
         {
@@ -253,7 +265,7 @@ public class TicketService
         return ticket;
     }
 
-    public async Task<Ticket?> UpdateTicketAsync(string projectSlug, int ticketId, string? title = null, string? description = null, string author = "owner", TicketPriority? priority = null, string? assignedTo = null, string? cliRuntimeId = null, string? caoRoleId = null, string? modelProfileId = null)
+    public async Task<Ticket?> UpdateTicketAsync(string projectSlug, int ticketId, string? title = null, string? description = null, string author = "owner", TicketPriority? priority = null, string? assignedTo = null, string? cliRuntimeId = null, string? caoRoleId = null, string? modelProfileId = null, string? riskLevel = null, string? reviewer = null, string? requiredEvidence = null)
     {
         if (string.IsNullOrWhiteSpace(author))
             throw new InvalidOperationException("Le champ 'author' est requis.");
@@ -337,6 +349,36 @@ public class TicketService
                 TicketId = ticketId,
                 Author = author,
                 Text = $"a changé le profil modèle : {ticket.ModelProfileId ?? "défaut"}"
+            });
+        }
+        if (riskLevel is not null && riskLevel != ticket.RiskLevel)
+        {
+            ticket.RiskLevel = riskLevel.Length == 0 ? null : riskLevel;
+            db.ActivityEntries.Add(new ActivityEntry
+            {
+                TicketId = ticketId,
+                Author = author,
+                Text = $"a changé le niveau de risque : {ticket.RiskLevel ?? "défaut"}"
+            });
+        }
+        if (reviewer is not null && reviewer != ticket.Reviewer)
+        {
+            ticket.Reviewer = reviewer.Length == 0 ? null : reviewer;
+            db.ActivityEntries.Add(new ActivityEntry
+            {
+                TicketId = ticketId,
+                Author = author,
+                Text = $"a changé le reviewer : {ticket.Reviewer ?? "aucun"}"
+            });
+        }
+        if (requiredEvidence is not null && requiredEvidence != ticket.RequiredEvidence)
+        {
+            ticket.RequiredEvidence = requiredEvidence.Length == 0 ? null : requiredEvidence;
+            db.ActivityEntries.Add(new ActivityEntry
+            {
+                TicketId = ticketId,
+                Author = author,
+                Text = $"a changé les critères de preuve : {ticket.RequiredEvidence ?? "aucun"}"
             });
         }
         ticket.UpdatedAt = DateTime.UtcNow;

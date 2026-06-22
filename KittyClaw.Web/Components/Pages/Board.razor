@@ -192,6 +192,27 @@ else
                                         }
                                     </div>
                                 }
+                                @if (!string.IsNullOrEmpty(ticket.CliRuntimeId) || !string.IsNullOrEmpty(ticket.CaoRoleId) || !string.IsNullOrEmpty(ticket.ModelProfileId) || !string.IsNullOrEmpty(ticket.RiskLevel))
+                                {
+                                    <div class="orchestration-badges">
+                                        @if (!string.IsNullOrEmpty(ticket.CliRuntimeId))
+                                        {
+                                            <span class="orch-badge orch-badge--runtime" title="CLI Runtime">@ticket.CliRuntimeId</span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(ticket.CaoRoleId))
+                                        {
+                                            <span class="orch-badge orch-badge--role" title="CAO Role">@ticket.CaoRoleId</span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(ticket.ModelProfileId))
+                                        {
+                                            <span class="orch-badge orch-badge--model" title="Model Profile">@ticket.ModelProfileId</span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(ticket.RiskLevel))
+                                        {
+                                            <span class="orch-badge orch-badge--risk-@ticket.RiskLevel.ToLowerInvariant()" title="Risk Level">@ticket.RiskLevel</span>
+                                        }
+                                    </div>
+                                }
                                 @if (ticket.SubTickets.Count > 0)
                                 {
                                     <div class="sub-ticket-indicator" @onclick="() => EnterSubKanban(ticket)" @onclick:stopPropagation title="@L["ViewSubTickets"]">
@@ -384,6 +405,70 @@ else
                             }
                         </select>
                     </div>
+
+                    <label class="field-label">CLI Runtime</label>
+                    <select class="orch-select" @bind="_newTicketCliRuntimeId">
+                        <option value="">Default (from assignee)</option>
+                        <option value="mimo-code">Mimo Code</option>
+                        <option value="codex">Codex</option>
+                        <option value="opencode">OpenCode</option>
+                        <option value="vibe">Vibe</option>
+                        <option value="kimi-code">Kimi Code</option>
+                        <option value="github-copilot">GitHub Copilot</option>
+                        <option value="antigravity">Antigravity</option>
+                        <option value="script">Script</option>
+                        <option value="claude-code">Claude Code</option>
+                    </select>
+
+                    <label class="field-label">CAO Role</label>
+                    <select class="orch-select" @bind="_newTicketCaoRoleId">
+                        <option value="">Default (from runtime)</option>
+                        <option value="supervisor">Supervisor</option>
+                        <option value="planner">Planner</option>
+                        <option value="developer">Developer</option>
+                        <option value="reviewer">Reviewer</option>
+                        <option value="qa">QA</option>
+                        <option value="security-reviewer">Security Reviewer</option>
+                        <option value="researcher">Researcher</option>
+                        <option value="critic">Critic</option>
+                        <option value="explainer">Explainer</option>
+                    </select>
+
+                    <label class="field-label">Model Profile</label>
+                    <select class="orch-select" @bind="_newTicketModelProfileId">
+                        <option value="">Default (from role)</option>
+                        <option value="petpals-planner">PetPals Planner</option>
+                        <option value="petpals-coder">PetPals Coder</option>
+                        <option value="petpals-coder-pro">PetPals Coder Pro</option>
+                        <option value="petpals-reviewer">PetPals Reviewer</option>
+                        <option value="petpals-security-reviewer">PetPals Security Reviewer</option>
+                        <option value="petpals-researcher">PetPals Researcher</option>
+                        <option value="petpals-cheap">PetPals Cheap</option>
+                        <option value="petpals-local">PetPals Local</option>
+                    </select>
+
+                    <label class="field-label">Risk Level</label>
+                    <select class="orch-select" @bind="_newTicketRiskLevel">
+                        <option value="">None</option>
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                    </select>
+
+                    <label class="field-label">Reviewer</label>
+                    <div class="assignee-picker-wrapper">
+                        <select class="orch-select" @bind="_newTicketReviewer">
+                            <option value="">None</option>
+                            @foreach (var member in _allMembers)
+                            {
+                                <option value="@member.Slug">@member.Name (@member.Slug)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <label class="field-label">Required Evidence</label>
+                    <textarea class="orch-textarea" @bind="_newTicketRequiredEvidence" placeholder="e.g. branch, commit SHA, changed files, validation output, screenshots, RLS proof"></textarea>
                 </div>
                 <div class="create-popup-footer">
                     <button class="cancel-btn" @onclick="CloseCreatePopup">@L["Cancel"]</button>
@@ -503,6 +588,56 @@ else
                     <span>@_selectedTicket.CreatedAt.ToString("d")</span>
                 </div>
             </div>
+
+            @* ── Orchestration metadata section ── *@
+            @if (!string.IsNullOrEmpty(_selectedTicket.CliRuntimeId) || !string.IsNullOrEmpty(_selectedTicket.CaoRoleId) || !string.IsNullOrEmpty(_selectedTicket.ModelProfileId) || !string.IsNullOrEmpty(_selectedTicket.RiskLevel) || !string.IsNullOrEmpty(_selectedTicket.Reviewer) || !string.IsNullOrEmpty(_selectedTicket.RequiredEvidence))
+            {
+                <div class="orch-section">
+                    <div class="orch-section-title">Orchestration</div>
+                    @if (!string.IsNullOrEmpty(_selectedTicket.CliRuntimeId))
+                    {
+                        <div class="orch-field">
+                            <span class="orch-field-label">CLI Runtime</span>
+                            <span class="orch-field-value">@_selectedTicket.CliRuntimeId</span>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(_selectedTicket.CaoRoleId))
+                    {
+                        <div class="orch-field">
+                            <span class="orch-field-label">CAO Role</span>
+                            <span class="orch-field-value">@_selectedTicket.CaoRoleId</span>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(_selectedTicket.ModelProfileId))
+                    {
+                        <div class="orch-field">
+                            <span class="orch-field-label">Model Profile</span>
+                            <span class="orch-field-value">@_selectedTicket.ModelProfileId</span>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(_selectedTicket.RiskLevel))
+                    {
+                        <div class="orch-field">
+                            <span class="orch-field-label">Risk Level</span>
+                            <span class="orch-field-value orch-badge--risk-@_selectedTicket.RiskLevel.ToLowerInvariant()">@_selectedTicket.RiskLevel</span>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(_selectedTicket.Reviewer))
+                    {
+                        <div class="orch-field">
+                            <span class="orch-field-label">Reviewer</span>
+                            <span class="orch-field-value">@MemberDisplayName(_selectedTicket.Reviewer)</span>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(_selectedTicket.RequiredEvidence))
+                    {
+                        <div class="orch-field">
+                            <span class="orch-field-label">Required Evidence</span>
+                            <span class="orch-field-value">@_selectedTicket.RequiredEvidence</span>
+                        </div>
+                    }
+                </div>
+            }
 
             @* ── Sub-tickets section ── *@
             @{ var selectedSummary = _tickets.FirstOrDefault(t => t.Id == _selectedTicket.Id); }
@@ -747,6 +882,12 @@ else
     // Members
     private List<Member> _allMembers = [];
     private string _newTicketAssignedTo = "";
+    private string _newTicketCliRuntimeId = "";
+    private string _newTicketCaoRoleId = "";
+    private string _newTicketModelProfileId = "";
+    private string _newTicketRiskLevel = "";
+    private string _newTicketReviewer = "";
+    private string _newTicketRequiredEvidence = "";
 
     // Assignee autocomplete
     private string _assigneeSearch = "";
@@ -826,6 +967,19 @@ else
 
     [JSInvokable]
     public async Task OnCtrlZ() => await PerformUndo();
+
+    [JSInvokable]
+    public async Task RefreshBoardAsync()
+    {
+        _columns = await ColumnService.ListColumnsAsync(Slug);
+        _tickets = await TicketService.ListTicketsAsync(Slug);
+        _allLabels = await LabelService.ListLabelsAsync(Slug);
+        _allMembers = await MemberService.ListMembersAsync(Slug);
+        if (_selectedTicket is not null)
+            _selectedTicket = await TicketService.GetTicketAsync(Slug, _selectedTicket.Id);
+        await RebuildPipelineAsync();
+        StateHasChanged();
+    }
 
     private async Task PerformUndo()
     {
@@ -1131,6 +1285,10 @@ else
         }
         if (TicketId.HasValue)
             _selectedTicket = await TicketService.GetTicketAsync(Slug, TicketId.Value);
+
+        // Start SSE connection for real-time board updates
+        _dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("startBoardUpdates", Slug, _dotNetRef);
     }
 
     private void OnProjectUpdatedExternal(string slug)
@@ -1155,6 +1313,7 @@ else
         AgentRuns.OnChange -= OnAgentRunsChanged;
         if (_undoHandler is not null)
             _ = JS.InvokeVoidAsync("unregisterUndoShortcut", _undoHandler);
+        _ = JS.InvokeVoidAsync("stopBoardUpdates");
         _dotNetRef?.Dispose();
         _escCreatePopup?.Dispose();
         _escTicketPanel?.Dispose();
@@ -1675,6 +1834,12 @@ else
         _newTicketLabelIds = [];
         _newTicketPriority = TicketPriority.NiceToHave;
         _newTicketAssignedTo = "";
+        _newTicketCliRuntimeId = "";
+        _newTicketCaoRoleId = "";
+        _newTicketModelProfileId = "";
+        _newTicketRiskLevel = "";
+        _newTicketReviewer = "";
+        _newTicketRequiredEvidence = "";
         _showNewLabelForm = false;
         _showCreatePopup = true;
         _escCreatePopup?.Dispose();
@@ -1709,7 +1874,7 @@ else
     {
         if (string.IsNullOrWhiteSpace(_newTicketTitle) || _columns.Count == 0) return;
         var status = _columns[0].Name;
-        var ticket = await TicketService.CreateTicketAsync(Slug, _newTicketTitle.Trim(), _newTicketDescription.Trim(), status: status, labelIds: _newTicketLabelIds, priority: _newTicketPriority, assignedTo: string.IsNullOrEmpty(_newTicketAssignedTo) ? null : _newTicketAssignedTo, parentId: _subKanbanParentId);
+        var ticket = await TicketService.CreateTicketAsync(Slug, _newTicketTitle.Trim(), _newTicketDescription.Trim(), status: status, labelIds: _newTicketLabelIds, priority: _newTicketPriority, assignedTo: string.IsNullOrEmpty(_newTicketAssignedTo) ? null : _newTicketAssignedTo, parentId: _subKanbanParentId, cliRuntimeId: string.IsNullOrEmpty(_newTicketCliRuntimeId) ? null : _newTicketCliRuntimeId, caoRoleId: string.IsNullOrEmpty(_newTicketCaoRoleId) ? null : _newTicketCaoRoleId, modelProfileId: string.IsNullOrEmpty(_newTicketModelProfileId) ? null : _newTicketModelProfileId, riskLevel: string.IsNullOrEmpty(_newTicketRiskLevel) ? null : _newTicketRiskLevel, reviewer: string.IsNullOrEmpty(_newTicketReviewer) ? null : _newTicketReviewer, requiredEvidence: string.IsNullOrEmpty(_newTicketRequiredEvidence) ? null : _newTicketRequiredEvidence);
         if (ticket is not null)
             PushUndo($"{L["UndoCreate"]} #{ticket.Id}", async () =>
                 await TicketService.DeleteTicketAsync(Slug, ticket.Id));

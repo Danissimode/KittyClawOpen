@@ -109,6 +109,14 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<KittyClaw.Web.Serv
 if (OperatingSystem.IsWindows())
     builder.Services.AddSingleton<KittyClaw.Core.Platform.IFolderPicker, KittyClaw.Core.Platform.WindowsFolderPicker>();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+    });
+});
+
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddOpenApi();
@@ -136,6 +144,7 @@ app.UseStaticFiles(new Microsoft.AspNetCore.Builder.StaticFileOptions
 
 app.UseAntiforgery();
 
+app.UseCors("AllowAll");
 app.MapOpenApi();
 app.MapTodoApi();
 
