@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using KittyClaw.Core.Automation;
 using KittyClaw.Core.Automation.Runners;
-4a using KittyClaw.Core.Integrations.OpenCode;
+using KittyClaw.Core.Integrations.OpenCode;
 using KittyClaw.Core.Automation.Runtimes;
 using KittyClaw.Core.Services;
 using KittyClaw.Web.Api;
@@ -108,7 +108,7 @@ builder.Services.AddSingleton<RunnerRegistry>(sp =>
     
     return registry;
 });
-builder.Services.AddSingleton<AutomationEngine>();\nbuilder.Services.AddHostedService(sp => sp.GetRequiredService<AutomationEngine>());
+builder.Services.AddSingleton<AutomationEngine>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<AutomationEngine>());
 builder.Services.AddSingleton<GitRepositoryWatcher>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<GitRepositoryWatcher>());

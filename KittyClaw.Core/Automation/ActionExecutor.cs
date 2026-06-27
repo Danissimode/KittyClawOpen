@@ -10,7 +10,7 @@ namespace KittyClaw.Core.Automation;
 /// Evaluates automation conditions and executes action sequences.
 /// Owns the git semaphore and all Execute*ActionAsync helpers.
 /// </summary>
-internal sealed class ActionExecutor
+internal sealed partial class ActionExecutor
 {
     private readonly TicketService _tickets;
     private readonly MemberService _members;

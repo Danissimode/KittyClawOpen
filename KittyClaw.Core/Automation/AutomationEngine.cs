@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using KittyClaw.Core.Automation.Runners;
 using KittyClaw.Core.Automation.Runtimes;
 using KittyClaw.Core.Automation.Triggers;
+using KittyClaw.Core.Integrations.OpenCode;
 using KittyClaw.Core.Services;
 
 namespace KittyClaw.Core.Automation;

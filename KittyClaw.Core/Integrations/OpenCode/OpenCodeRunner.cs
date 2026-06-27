@@ -179,9 +179,14 @@ public sealed class OpenCodeRunner : IAgentRunner
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
-            CreateNoWindow = true,
-            Environment = request.Environment
+            CreateNoWindow = true
         };
+        
+        // Copy environment variables
+        foreach (var env in request.Environment)
+        {
+            processInfo.Environment[env.Key] = env.Value;
+        }
         
         using var process = Process.Start(processInfo);
         if (process is null)

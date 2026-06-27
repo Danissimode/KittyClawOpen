@@ -6,7 +6,11 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using KittyClaw.Core.Automation.Runners;
 using KittyClaw.Core.Automation.Runtimes;
+using KittyClaw.Core.Automation.Triggers;
+using KittyClaw.Core.Integrations.OpenCode;
 using KittyClaw.Core.Services;
+using RunnerRequest = KittyClaw.Core.Automation.Runners.AgentRunRequest;
+using RunnerResult = KittyClaw.Core.Automation.Runners.AgentRunResult;
 
 namespace KittyClaw.Core.Automation;
 
@@ -49,8 +53,9 @@ internal sealed partial class ActionExecutor
     {
         if (_runnerRegistry is null)
         {
-            // Fallback to legacy behavior
-            return new LegacyRunnerAdapter(_runtimes.FirstOrDefault() as ClaudeRunner);
+            // Fallback to legacy behavior - create adapter from first runtime
+            var runtime = _runtimes.FirstOrDefault();
+            return new LegacyRunnerAdapter(runtime);
         }
         
         // Try to resolve by explicit runner kind
@@ -63,10 +68,10 @@ internal sealed partial class ActionExecutor
             }
         }
         
-        // Try to resolve by execution mode
-        if (action.ExecutionMode.HasValue)
+        // Try to resolve by execution mode (parse string to enum)
+        if (!string.IsNullOrEmpty(action.ExecutionMode) && Enum.TryParse<ExecutionMode>(action.ExecutionMode, true, out var mode))
         {
-            var runner = _runnerRegistry.ResolveRunner(action.ExecutionMode.Value);
+            var runner = _runnerRegistry.ResolveRunner(mode);
             if (runner is not null && runner.IsAvailable)
             {
                 return runner;
@@ -98,7 +103,9 @@ internal sealed partial class ActionExecutor
         
         var labels = ticket?.Labels.Select(l => l.Name).ToList() ?? new List<string>();
         
-        var executionMode = action.ExecutionMode ?? ExecutionMode.LegacyClaude;
+        var executionMode = Enum.TryParse<ExecutionMode>(action.ExecutionMode, true, out var mode) 
+            ? mode 
+            : ExecutionMode.LegacyClaude;
         var provider = action.Provider ?? runner.Kind;
         var model = action.Model;
         
@@ -128,7 +135,9 @@ internal sealed partial class ActionExecutor
             return null;
         }
         
-        var executionMode = action.ExecutionMode ?? ExecutionMode.LegacyClaude;
+        var executionMode = Enum.TryParse<ExecutionMode>(action.ExecutionMode, true, out var mode) 
+            ? mode 
+            : ExecutionMode.LegacyClaude;
         var worktreeRequired = await _policyService.IsWorktreeRequiredAsync(
             rt.Slug,
             firing.TicketId ?? 0,
@@ -211,18 +220,18 @@ internal sealed partial class ActionExecutor
 /// </summary>
 internal sealed class LegacyRunnerAdapter : IAgentRunner
 {
-    private readonly ClaudeRunner? _claudeRunner;
+    private readonly IAgentRuntime? _runtime;
     
-    public string Kind => "claude";
+    public string Kind => _runtime?.Id ?? "claude";
     public string DisplayName => "Claude (Legacy)";
-    public bool IsAvailable => _claudeRunner is not null;
+    public bool IsAvailable => _runtime is not null;
     
-    public LegacyRunnerAdapter(ClaudeRunner? claudeRunner)
+    public LegacyRunnerAdapter(IAgentRuntime? runtime)
     {
-        _claudeRunner = claudeRunner;
+        _runtime = runtime;
     }
     
-    public async Task<AgentRunResult> StartAsync(AgentRunRequest request, CancellationToken cancellationToken)
+    public async Task<RunnerResult> StartAsync(RunnerRequest request, CancellationToken cancellationToken)
     {
         throw new NotImplementedException("Legacy runner adapter should not be used directly");
     }
@@ -241,17 +250,4 @@ internal sealed class LegacyRunnerAdapter : IAgentRunner
     {
         return AgentRunStatus.Running;
     }
-}
-
-// Add WorktreeInfo to this namespace for compatibility
-public sealed class WorktreeInfo
-{
-    public required string ProjectSlug { get; init; }
-    public required int TicketId { get; init; }
-    public required string WorktreePath { get; init; }
-    public required string BranchName { get; init; }
-    public required string RootPath { get; init; }
-    public bool Exists { get; init; }
-    public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
-    public DateTimeOffset? LastUsedAt { get; init; }
 }

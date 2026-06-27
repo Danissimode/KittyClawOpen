@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using KittyClaw.Core.Automation.Runners;
+using KittyClaw.Core.Automation.Runtimes;
 
 namespace KittyClaw.Core.Integrations.OpenCode;
 
@@ -54,7 +56,7 @@ public sealed class TicketExecutionContext
 /// <summary>
 /// Information about a worktree
 /// </summary>
-public sealed class WorktreeInfo
+public sealed record WorktreeInfo
 {
     public required string ProjectSlug { get; init; }
     public required int TicketId { get; init; }

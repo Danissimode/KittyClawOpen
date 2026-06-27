@@ -59,6 +59,7 @@ public sealed class TicketExecutionMetadata
     public string? SessionId { get; init; }
     public string? WorktreePath { get; init; }
     public string? BranchName { get; init; }
+    public string? RootPath { get; init; }
     public required AgentRunStatus Status { get; init; }
     public DateTimeOffset StartedAt { get; init; }
     public DateTimeOffset? FinishedAt { get; init; }

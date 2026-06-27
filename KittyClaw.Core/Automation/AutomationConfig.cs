@@ -230,6 +230,14 @@ public sealed class RunAgentActionSpec : ActionSpec
     public Dictionary<string, string> Env { get; set; } = new();
     public string? Model { get; set; }
     public bool RestoreStatusOnFail { get; set; } = true;
+    
+    // Execution mode and runner configuration
+    // Inherited from project default if not specified
+    public string? ExecutionMode { get; set; }
+    public string? RunnerKind { get; set; }
+    public string? Provider { get; set; }
+    public string? Profile { get; set; }
+    public bool UseWorktree { get; set; } = true;
 }
 
 public sealed class MoveTicketStatusActionSpec : ActionSpec

@@ -87,7 +87,7 @@ public sealed class AgentRunRequest
     public required string Prompt { get; init; }
     public string? ConcurrencyGroup { get; init; }
     public int MaxTurns { get; init; } = 200;
-    public IReadOnlyDictionary<string, string> Environment { get; init; } = new Dictionary<string, string>();
+    public IDictionary<string, string> Environment { get; init; } = new Dictionary<string, string>();
     public string? Model { get; init; }
     public string? Provider { get; init; }
     public string? Profile { get; init; }
@@ -95,6 +95,7 @@ public sealed class AgentRunRequest
     public string? WorktreePath { get; init; }
     public string? BranchName { get; init; }
     public string? RunId { get; init; }
+    public ExecutionMetadata? ExecutionMetadata { get; init; }
     public Action<StreamEvent>? OnEventHook { get; init; }
 }
 
@@ -147,4 +148,5 @@ public sealed class ExecutionMetadata
     public string? ProjectId { get; set; }
     public string? OpenCodeAgent { get; set; }
     public bool SteerSupported { get; set; } = true;
+    public string? LastError { get; set; }
 }

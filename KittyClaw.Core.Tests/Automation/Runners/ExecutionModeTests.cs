@@ -9,7 +9,7 @@ public class ExecutionModeTests
     [Fact]
     public void ExecutionMode_EnumValues_AreCorrect()
     {
-        var allModes = Enum.GetValues(typeof(ExecutionMode));
+        var allModes = Enum.GetValues<ExecutionMode>();
         
         Assert.Contains(ExecutionMode.LegacyClaude, allModes);
         Assert.Contains(ExecutionMode.DirectOpenCode, allModes);
