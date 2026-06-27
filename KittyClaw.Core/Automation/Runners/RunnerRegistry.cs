@@ -84,19 +84,28 @@ public sealed class RunnerRegistry
         _runners.Values.Where(r => r.IsAvailable).ToList();
     
     /// <summary>
-    /// Resolve the appropriate runner for an execution mode
+    /// Resolve the appropriate runner for an execution mode.
+    /// Honors IsAvailable: if the mode-mapped runner is registered but not currently
+    /// available (e.g. OpenCode server down), fall back to the default runner.
     /// </summary>
     public IAgentRunner ResolveRunner(ExecutionMode executionMode)
     {
         return executionMode switch
         {
-            ExecutionMode.LegacyClaude => GetRunner("claude") ?? GetDefaultRunner(),
-            ExecutionMode.DirectOpenCode => GetRunner("opencode") ?? GetDefaultRunner(),
-            ExecutionMode.CaoGoverned => GetRunner("cao") ?? GetDefaultRunner(),
-            ExecutionMode.TeamWorkflow => GetRunner("team") ?? GetDefaultRunner(),
-            ExecutionMode.Manual => GetRunner("manual") ?? GetDefaultRunner(),
+            ExecutionMode.LegacyClaude => GetAvailable("claude"),
+            ExecutionMode.DirectOpenCode => GetAvailable("opencode"),
+            ExecutionMode.CaoGoverned => GetAvailable("cao"),
+            ExecutionMode.TeamWorkflow => GetAvailable("team"),
+            ExecutionMode.Manual => GetAvailable("manual"),
             _ => GetDefaultRunner()
         };
+    }
+
+    private IAgentRunner GetAvailable(string kind)
+    {
+        var runner = GetRunner(kind);
+        if (runner is not null && runner.IsAvailable) return runner;
+        return GetDefaultRunner();
     }
     
     /// <summary>

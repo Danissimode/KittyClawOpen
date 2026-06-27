@@ -7,6 +7,9 @@
 @using KittyClaw.Core.Models
 @using KittyClaw.Core.Services
 @using KittyClaw.Core.Extensions
+@using KittyClaw.Core.Automation
+@using KittyClaw.Core.Automation.Runners
+@using KittyClaw.Web.Api
 @using KittyClaw.Web.Extensions
 @inject ProjectService ProjectService
 @inject TicketService TicketService
@@ -21,6 +24,7 @@
 @inject IJSRuntime JS
 @inject LocalizationService L
 @inject KittyClaw.Web.Services.EscapeKeyStack EscapeStack
+@inject HttpClient Http
 @rendermode InteractiveServer
 @implements IDisposable
 
@@ -469,6 +473,63 @@ else
 
                     <label class="field-label">Required Evidence</label>
                     <textarea class="orch-textarea" @bind="_newTicketRequiredEvidence" placeholder="e.g. branch, commit SHA, changed files, validation output, screenshots, RLS proof"></textarea>
+
+                    <label class="field-label">Execution Mode</label>
+                    <select class="orch-select" @bind="_newTicketExecutionMode">
+                        <option value="">Inherit from project</option>
+                        <option value="LegacyClaude">Legacy Claude</option>
+                        <option value="DirectOpenCode">Direct OpenCode</option>
+                        <option value="OpenCodeServer">OpenCode Server</option>
+                        <option value="CaoGoverned">CAO Governed</option>
+                        <option value="TeamWorkflow">Team Workflow</option>
+                        <option value="Manual">Manual</option>
+                    </select>
+
+                    @if (_newTicketExecutionMode is "DirectOpenCode" or "OpenCodeServer")
+                    {
+                        <label class="field-label">OpenCode Agent</label>
+                        <select class="orch-select" @bind="_newTicketOpenCodeAgent">
+                            <option value="">Default</option>
+                            <option value="build">build</option>
+                            <option value="plan">plan</option>
+                        </select>
+
+                        <label class="field-label">Provider</label>
+                        <select class="orch-select" @bind="_newTicketProvider">
+                            <option value="">Inherit from project</option>
+                            <option value="openrouter">openrouter</option>
+                            <option value="anthropic">anthropic</option>
+                            <option value="openai">openai</option>
+                            <option value="ollama">ollama</option>
+                            <option value="litellm">litellm</option>
+                            <option value="deepseek">deepseek</option>
+                            <option value="mistral">mistral</option>
+                            <option value="gemini">gemini</option>
+                            <option value="qwen">qwen</option>
+                        </select>
+
+                        <label class="field-label">Model</label>
+                        <input class="orch-textarea" @bind="_newTicketModel" placeholder="e.g. qwen/qwen3.5-coder" />
+
+                        <label class="field-label">Profile</label>
+                        <select class="orch-select" @bind="_newTicketProfile">
+                            <option value="">Default</option>
+                            <option value="developer">developer</option>
+                            <option value="planner">planner</option>
+                            <option value="reviewer">reviewer</option>
+                            <option value="tester">tester</option>
+                            <option value="researcher">researcher</option>
+                        </select>
+                    }
+
+                    <label class="field-label">
+                        <input type="checkbox" @bind="_newTicketUseWorktree" />
+                        Use per-card worktree
+                    </label>
+                    <label class="field-label">
+                        <input type="checkbox" @bind="_newTicketRequiresPlan" />
+                        Require approved plan before run
+                    </label>
                 </div>
                 <div class="create-popup-footer">
                     <button class="cancel-btn" @onclick="CloseCreatePopup">@L["Cancel"]</button>
@@ -767,6 +828,238 @@ else
                     </div>
                 </div>
             </div>
+
+            @* ── Drawer tabs: Details / Plan / Execution / Run ── *@
+            <div class="drawer-tabs">
+                <button class="drawer-tab @(_activeDrawerTab == "details" ? "active" : "")" @onclick="@(() => _activeDrawerTab = "details")">Details</button>
+                <button class="drawer-tab @(_activeDrawerTab == "plan" ? "active" : "")" @onclick="@(() => { _activeDrawerTab = "plan"; if (_selectedTicket is not null) _planDraft = _selectedTicket.PlanBody ?? ""; })">
+                    Plan @if (!string.IsNullOrEmpty(_selectedTicket?.PlanBody))
+                    {
+                        <span class="plan-indicator plan-@_selectedTicket.PlanStatus">●</span>
+                    }
+                </button>
+                <button class="drawer-tab @(_activeDrawerTab == "execution" ? "active" : "")" @onclick="@(() => _activeDrawerTab = "execution")">Execution</button>
+                <button class="drawer-tab @(_activeDrawerTab == "run" ? "active" : "")" @onclick="@(() => _activeDrawerTab = "run")">
+                    Run @if (_latestRunMeta is not null)
+                    {
+                        <span class="run-status run-@_latestRunMeta.Status.ToString().ToLower()">●</span>
+                    }
+                </button>
+            </div>
+
+            @* ── Plan tab ── *@
+            @if (_activeDrawerTab == "plan")
+            {
+                <div class="drawer-tab-content">
+                    <div class="plan-section">
+                        <div class="plan-status-row">
+                            <label class="field-label">Status</label>
+                            <span class="plan-badge plan-@_selectedTicket.PlanStatus">@_selectedTicket.PlanStatus</span>
+                            @if (_selectedTicket.PlanApprovedBy is not null)
+                            {
+                                <span class="plan-approver">approved by @_selectedTicket.PlanApprovedBy</span>
+                            }
+                        </div>
+
+                        <label class="field-label">
+                            <input type="checkbox" @bind="_selectedTicket.RequiresPlan" @bind:after="UpdateRequiresPlan" />
+                            Requires approved plan before run
+                        </label>
+
+                        @if (_planEditing)
+                        {
+                            <textarea class="plan-editor" @bind="_planDraft" placeholder="Step 1: ...&#10;Step 2: ..."></textarea>
+                            <div class="plan-actions">
+                                <button class="btn-primary" @onclick="SavePlanDraft">Save Draft</button>
+                                <button class="btn-secondary" @onclick="() => _planEditing = false">Cancel</button>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="plan-body-display">
+                                @if (string.IsNullOrEmpty(_selectedTicket.PlanBody))
+                                {
+                                    <em class="muted">No plan drafted yet. The agent will generate one when started.</em>
+                                }
+                                else
+                                {
+                                    <pre class="plan-body">@_selectedTicket.PlanBody</pre>
+                                }
+                                <div class="plan-actions">
+                                    <button class="btn-secondary" @onclick="() => _planEditing = true">@(string.IsNullOrEmpty(_selectedTicket.PlanBody) ? "Write Plan" : "Edit Plan")</button>
+                                    @if (!string.IsNullOrEmpty(_selectedTicket.PlanBody) && _selectedTicket.PlanStatus != "approved")
+                                    {
+                                        <button class="btn-primary" @onclick="ApprovePlan" disabled="@(string.IsNullOrEmpty(_selectedTicket.PlanBody))">Approve</button>
+                                        <button class="btn-secondary" @onclick="RejectPlan">Reject</button>
+                                    }
+                                    @if (_selectedTicket.PlanStatus == "approved")
+                                    {
+                                        <button class="btn-secondary" @onclick="ResetPlan">Reset</button>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            @* ── Execution tab ── *@
+            @if (_activeDrawerTab == "execution")
+            {
+                <div class="drawer-tab-content">
+                    <div class="execution-section">
+                        <label class="field-label">Execution Mode</label>
+                        <select class="orch-select" @bind="_selectedTicket.ExecutionModeOverride" @bind:after="UpdateExecutionOverrides">
+                            <option value="">Inherit from project</option>
+                            @foreach (var mode in _executionModeOptions)
+                            {
+                                <option value="@mode">@mode</option>
+                            }
+                        </select>
+
+                        @if (_selectedTicket.ExecutionModeOverride == "DirectOpenCode" || _selectedTicket.ExecutionModeOverride == "OpenCodeServer")
+                        {
+                            <label class="field-label">OpenCode Agent</label>
+                            <select class="orch-select" @bind="_selectedTicket.OpenCodeAgent" @bind:after="UpdateExecutionOverrides">
+                                <option value="">Default (from project)</option>
+                                @foreach (var agent in _opencodeAgentOptions)
+                                {
+                                    <option value="@agent">@agent</option>
+                                }
+                            </select>
+
+                            <label class="field-label">Provider</label>
+                            <select class="orch-select" @bind="_selectedTicket.ProviderOverride" @bind:after="UpdateExecutionOverrides">
+                                <option value="">Inherit from project</option>
+                                @foreach (var p in _providerOptions)
+                                {
+                                    <option value="@p">@p</option>
+                                }
+                            </select>
+
+                            <label class="field-label">Model</label>
+                            <input class="text-input" @bind="_selectedTicket.ModelOverride" @bind:after="UpdateExecutionOverrides"
+                                   placeholder="e.g. qwen/qwen3.5-coder, claude-sonnet-4" />
+
+                            <label class="field-label">Profile</label>
+                            <select class="orch-select" @bind="_selectedTicket.ProfileOverride" @bind:after="UpdateExecutionOverrides">
+                                <option value="">Inherit from project</option>
+                                @foreach (var p in _profileOptions)
+                                {
+                                    <option value="@p">@p</option>
+                                }
+                            </select>
+                        }
+
+                        <label class="field-label">
+                            <input type="checkbox" @bind="_selectedTicket.UseWorktree" @bind:after="UpdateExecutionOverrides" />
+                            Run in per-card worktree (recommended)
+                        </label>
+
+                        @if (_opencodeHealth is not null)
+                        {
+                            <div class="health-indicator @(_opencodeHealth == "available" ? "ok" : "warn")">
+                                OpenCode: @_opencodeHealth
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            @* ── Run tab ── *@
+            @if (_activeDrawerTab == "run")
+            {
+                <div class="drawer-tab-content">
+                    <div class="run-section">
+                        @if (_isStartingRun)
+                        {
+                            <div class="run-loading">Starting run…</div>
+                        }
+                        @if (_latestRunMeta is null)
+                        {
+                            <em class="muted">No run yet. Start a run to see provider/model/worktree info here.</em>
+                        }
+                        else
+                        {
+                            <div class="run-meta-grid">
+                                <div class="run-meta-row">
+                                    <span class="run-meta-label">Run ID</span>
+                                    <code class="run-meta-value">@_latestRunMeta.RunId</code>
+                                </div>
+                                <div class="run-meta-row">
+                                    <span class="run-meta-label">Status</span>
+                                    <span class="run-status run-@_latestRunMeta.Status.ToString().ToLower()">@_latestRunMeta.Status</span>
+                                </div>
+                                <div class="run-meta-row">
+                                    <span class="run-meta-label">Runner</span>
+                                    <span>@_latestRunMeta.RunnerKind</span>
+                                </div>
+                                <div class="run-meta-row">
+                                    <span class="run-meta-label">Execution Mode</span>
+                                    <span>@_latestRunMeta.ExecutionMode</span>
+                                </div>
+                                @if (!string.IsNullOrEmpty(_latestRunMeta.Provider))
+                                {
+                                    <div class="run-meta-row">
+                                        <span class="run-meta-label">Provider</span>
+                                        <span>@_latestRunMeta.Provider</span>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(_latestRunMeta.Model))
+                                {
+                                    <div class="run-meta-row">
+                                        <span class="run-meta-label">Model</span>
+                                        <span>@_latestRunMeta.Model</span>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(_latestRunMeta.WorktreePath))
+                                {
+                                    <div class="run-meta-row">
+                                        <span class="run-meta-label">Worktree</span>
+                                        <code class="run-meta-value">@_latestRunMeta.WorktreePath</code>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(_latestRunMeta.BranchName))
+                                {
+                                    <div class="run-meta-row">
+                                        <span class="run-meta-label">Branch</span>
+                                        <code class="run-meta-value">@_latestRunMeta.BranchName</code>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(_latestRunMeta.SessionId))
+                                {
+                                    <div class="run-meta-row">
+                                        <span class="run-meta-label">Session</span>
+                                        <code class="run-meta-value">@_latestRunMeta.SessionId</code>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(_latestRunMeta.LastError))
+                                {
+                                    <div class="run-meta-row">
+                                        <span class="run-meta-label">Last Error</span>
+                                        <span class="error-text">@_latestRunMeta.LastError</span>
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="run-actions">
+                                <button class="btn-secondary" @onclick="OpenRunDrawerForLatest">Open Run Drawer</button>
+                                @if (_latestRunMeta.Status == AgentRunStatus.Running)
+                                {
+                                    <button class="btn-warning" @onclick="StopLatestRun">Stop</button>
+                                }
+                            </div>
+                        }
+
+                        <div class="run-controls">
+                            <button class="btn-primary" @onclick="StartRunForSelected" disabled="@_isStartingRun">
+                                @(_latestRunMeta?.Status == AgentRunStatus.Running ? "Re-start" : "Start Run")
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+
         </div>
     }
 
@@ -910,6 +1203,27 @@ else
     private string _newTicketRiskLevel = "";
     private string _newTicketReviewer = "";
     private string _newTicketRequiredEvidence = "";
+
+    // Execution overrides (new ticket)
+    private string _newTicketExecutionMode = "";
+    private string _newTicketOpenCodeAgent = "";
+    private string _newTicketProvider = "";
+    private string _newTicketModel = "";
+    private string _newTicketProfile = "";
+    private bool _newTicketUseWorktree = true;
+    private bool _newTicketRequiresPlan = false;
+
+    // Plan / Execution state for the selected ticket
+    private TicketExecutionMetadata? _latestRunMeta;
+    private bool _planEditing = false;
+    private string _planDraft = "";
+    private string _activeDrawerTab = "details"; // details | plan | execution | run
+    private bool _isStartingRun = false;
+    private string? _opencodeHealth;
+    private List<string> _executionModeOptions = new() { "LegacyClaude", "DirectOpenCode", "CaoGoverned", "TeamWorkflow", "Manual" };
+    private List<string> _opencodeAgentOptions = new() { "build", "plan" };
+    private List<string> _providerOptions = new() { "openrouter", "anthropic", "openai", "ollama", "litellm", "deepseek", "mistral", "gemini", "qwen" };
+    private List<string> _profileOptions = new() { "developer", "planner", "reviewer", "tester", "researcher" };
 
     // Assignee autocomplete
     private string _assigneeSearch = "";
@@ -1914,6 +2228,13 @@ else
         _newTicketRiskLevel = "";
         _newTicketReviewer = "";
         _newTicketRequiredEvidence = "";
+        _newTicketExecutionMode = "";
+        _newTicketOpenCodeAgent = "";
+        _newTicketProvider = "";
+        _newTicketModel = "";
+        _newTicketProfile = "";
+        _newTicketUseWorktree = true;
+        _newTicketRequiresPlan = false;
         _showNewLabelForm = false;
         _showCreatePopup = true;
         _escCreatePopup?.Dispose();
@@ -1948,7 +2269,7 @@ else
     {
         if (string.IsNullOrWhiteSpace(_newTicketTitle) || _columns.Count == 0) return;
         var status = _columns[0].Name;
-        var ticket = await TicketService.CreateTicketAsync(Slug, _newTicketTitle.Trim(), _newTicketDescription.Trim(), status: status, labelIds: _newTicketLabelIds, priority: _newTicketPriority, assignedTo: string.IsNullOrEmpty(_newTicketAssignedTo) ? null : _newTicketAssignedTo, parentId: _subKanbanParentId, cliRuntimeId: string.IsNullOrEmpty(_newTicketCliRuntimeId) ? null : _newTicketCliRuntimeId, caoRoleId: string.IsNullOrEmpty(_newTicketCaoRoleId) ? null : _newTicketCaoRoleId, modelProfileId: string.IsNullOrEmpty(_newTicketModelProfileId) ? null : _newTicketModelProfileId, riskLevel: string.IsNullOrEmpty(_newTicketRiskLevel) ? null : _newTicketRiskLevel, reviewer: string.IsNullOrEmpty(_newTicketReviewer) ? null : _newTicketReviewer, requiredEvidence: string.IsNullOrEmpty(_newTicketRequiredEvidence) ? null : _newTicketRequiredEvidence);
+        var ticket = await TicketService.CreateTicketAsync(Slug, _newTicketTitle.Trim(), _newTicketDescription.Trim(), status: status, labelIds: _newTicketLabelIds, priority: _newTicketPriority, assignedTo: string.IsNullOrEmpty(_newTicketAssignedTo) ? null : _newTicketAssignedTo, parentId: _subKanbanParentId, cliRuntimeId: string.IsNullOrEmpty(_newTicketCliRuntimeId) ? null : _newTicketCliRuntimeId, caoRoleId: string.IsNullOrEmpty(_newTicketCaoRoleId) ? null : _newTicketCaoRoleId, modelProfileId: string.IsNullOrEmpty(_newTicketModelProfileId) ? null : _newTicketModelProfileId, riskLevel: string.IsNullOrEmpty(_newTicketRiskLevel) ? null : _newTicketRiskLevel, reviewer: string.IsNullOrEmpty(_newTicketReviewer) ? null : _newTicketReviewer, requiredEvidence: string.IsNullOrEmpty(_newTicketRequiredEvidence) ? null : _newTicketRequiredEvidence, executionModeOverride: string.IsNullOrEmpty(_newTicketExecutionMode) ? null : _newTicketExecutionMode, openCodeAgent: string.IsNullOrEmpty(_newTicketOpenCodeAgent) ? null : _newTicketOpenCodeAgent, providerOverride: string.IsNullOrEmpty(_newTicketProvider) ? null : _newTicketProvider, modelOverride: string.IsNullOrEmpty(_newTicketModel) ? null : _newTicketModel, profileOverride: string.IsNullOrEmpty(_newTicketProfile) ? null : _newTicketProfile, useWorktree: _newTicketUseWorktree);
         if (ticket is not null)
             PushUndo($"{L["UndoCreate"]} #{ticket.Id}", async () =>
                 await TicketService.DeleteTicketAsync(Slug, ticket.Id));
@@ -1965,12 +2286,19 @@ else
         _editingTitle = false;
         _editingCommentId = null;
         _fullscreenTarget = "";
+        _planEditing = false;
+        _planDraft = "";
+        _activeDrawerTab = "details";
         _selectedTicket = await TicketService.GetTicketAsync(Slug, ticket.Id);
         _escTicketPanel?.Dispose();
         _escTicketPanel = EscapeStack.PushWithFocus(JS, () => InvokeAsync(async () => { await ClosePanel(); StateHasChanged(); }));
 
         // Clear the "updated" indicator only for the ticket actually opened.
         await MarkTicketViewedAsync(ticket.Id);
+
+        // Load latest run metadata + check OpenCode health (fire-and-forget so the UI shows up fast).
+        _ = LoadLatestRun();
+        _ = CheckOpenCodeHealth();
 
         if (_subKanbanParentId is not null)
             Navigation.NavigateTo($"/board/{Slug}/sub/{_subKanbanParentId}/ticket/{ticket.Id}", replace: true);
@@ -1983,6 +2311,11 @@ else
         await JS.InvokeVoidAsync("saveColumnScrollPositions");
         _restoreScrollAfterRender = true;
         _selectedTicket = null;
+        _latestRunMeta = null;
+        _planEditing = false;
+        _planDraft = "";
+        _activeDrawerTab = "details";
+        _opencodeHealth = null;
         _escTicketPanel?.Dispose();
         _escTicketPanel = null;
         _confirmDelete = false;
@@ -1997,6 +2330,187 @@ else
             Navigation.NavigateTo($"/board/{Slug}/sub/{_subKanbanParentId}", replace: true);
         else
             Navigation.NavigateTo($"/board/{Slug}", replace: true);
+    }
+
+    // ── Plan workflow handlers ────────────────────────────────────────────────
+    private async Task SavePlanDraft()
+    {
+        if (_selectedTicket is null) return;
+        var ok = await UpdateTicketPatch(new UpdateTicketRequest(
+            Author: "owner",
+            PlanStatus: "drafting",
+            PlanBody: _planDraft));
+        if (ok)
+        {
+            _selectedTicket.PlanBody = _planDraft;
+            _selectedTicket.PlanStatus = "drafting";
+            _planEditing = false;
+        }
+    }
+
+    private async Task ApprovePlan()
+    {
+        if (_selectedTicket is null) return;
+        var resp = await Http.PostAsJsonAsync($"api/projects/{Slug}/tickets/{_selectedTicket.Id}/plan/approve",
+            new { approvedBy = "owner" });
+        if (resp.IsSuccessStatusCode)
+        {
+            var t = await resp.Content.ReadFromJsonAsync<Ticket>();
+            if (t is not null)
+            {
+                _selectedTicket.PlanStatus = t.PlanStatus;
+                _selectedTicket.PlanApprovedBy = t.PlanApprovedBy;
+                _selectedTicket.PlanApprovedAt = t.PlanApprovedAt;
+            }
+        }
+    }
+
+    private async Task RejectPlan()
+    {
+        if (_selectedTicket is null) return;
+        var resp = await Http.PostAsJsonAsync($"api/projects/{Slug}/tickets/{_selectedTicket.Id}/plan/reject",
+            new { rejectedBy = "owner", reason = "" });
+        if (resp.IsSuccessStatusCode)
+        {
+            var t = await resp.Content.ReadFromJsonAsync<Ticket>();
+            if (t is not null) _selectedTicket.PlanStatus = t.PlanStatus;
+        }
+    }
+
+    private async Task ResetPlan()
+    {
+        if (_selectedTicket is null) return;
+        var resp = await Http.PostAsJsonAsync($"api/projects/{Slug}/tickets/{_selectedTicket.Id}/plan/reset",
+            new { resetBy = "owner" });
+        if (resp.IsSuccessStatusCode)
+        {
+            var t = await resp.Content.ReadFromJsonAsync<Ticket>();
+            if (t is not null)
+            {
+                _selectedTicket.PlanStatus = t.PlanStatus;
+                _selectedTicket.PlanBody = t.PlanBody;
+                _selectedTicket.PlanApprovedBy = null;
+            }
+        }
+    }
+
+    private async Task UpdateRequiresPlan()
+    {
+        if (_selectedTicket is null) return;
+        await UpdateTicketPatch(new UpdateTicketRequest(
+            Author: "owner",
+            RequiresPlan: _selectedTicket.RequiresPlan));
+    }
+
+    // ── Execution override handlers ───────────────────────────────────────────
+    private async Task UpdateExecutionOverrides()
+    {
+        if (_selectedTicket is null) return;
+        await UpdateTicketPatch(new UpdateTicketRequest(
+            Author: "owner",
+            ExecutionModeOverride: _selectedTicket.ExecutionModeOverride ?? "",
+            OpenCodeAgent: _selectedTicket.OpenCodeAgent ?? "",
+            ProviderOverride: _selectedTicket.ProviderOverride ?? "",
+            ModelOverride: _selectedTicket.ModelOverride ?? "",
+            ProfileOverride: _selectedTicket.ProfileOverride ?? "",
+            UseWorktree: _selectedTicket.UseWorktree));
+        if (_selectedTicket.ExecutionModeOverride is "DirectOpenCode" or "OpenCodeServer")
+            await CheckOpenCodeHealth();
+    }
+
+    private async Task CheckOpenCodeHealth()
+    {
+        try
+        {
+            var resp = await Http.GetAsync($"api/projects/{Slug}/opencode/health");
+            if (resp.IsSuccessStatusCode)
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+                _opencodeHealth = doc.RootElement.GetProperty("available").GetBoolean() ? "available" : "unavailable";
+            }
+            else
+            {
+                _opencodeHealth = "unknown";
+            }
+        }
+        catch
+        {
+            _opencodeHealth = "unknown";
+        }
+    }
+
+    private async Task<bool> UpdateTicketPatch(UpdateTicketRequest req)
+    {
+        if (_selectedTicket is null) return false;
+        var resp = await Http.PatchAsync($"api/projects/{Slug}/tickets/{_selectedTicket.Id}",
+            JsonContent.Create(req));
+        return resp.IsSuccessStatusCode;
+    }
+
+    // ── Run control handlers ──────────────────────────────────────────────────
+    private async Task LoadLatestRun()
+    {
+        if (_selectedTicket is null) { _latestRunMeta = null; return; }
+        try
+        {
+            var resp = await Http.GetAsync($"api/projects/{Slug}/tickets/{_selectedTicket.Id}/runs/latest");
+            if (resp.IsSuccessStatusCode)
+            {
+                _latestRunMeta = await resp.Content.ReadFromJsonAsync<TicketExecutionMetadata>();
+            }
+            else
+            {
+                _latestRunMeta = null;
+            }
+        }
+        catch
+        {
+            _latestRunMeta = null;
+        }
+    }
+
+    private async Task StartRunForSelected()
+    {
+        if (_selectedTicket is null || _isStartingRun) return;
+        _isStartingRun = true;
+        StateHasChanged();
+        try
+        {
+            var resp = await Http.PostAsJsonAsync($"api/projects/{Slug}/tickets/{_selectedTicket.Id}/run",
+                new { author = "owner" });
+            if (resp.IsSuccessStatusCode)
+            {
+                // Refresh metadata shortly so the UI catches the new run.
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(1500);
+                    await InvokeAsync(async () =>
+                    {
+                        await LoadLatestRun();
+                        _activeDrawerTab = "run";
+                        StateHasChanged();
+                    });
+                });
+            }
+        }
+        finally
+        {
+            _isStartingRun = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task StopLatestRun()
+    {
+        if (_latestRunMeta is null) return;
+        await Http.PostAsync($"api/projects/{Slug}/runs/{_latestRunMeta.RunId}/stop", null);
+        await LoadLatestRun();
+    }
+
+    private void OpenRunDrawerForLatest()
+    {
+        if (_latestRunMeta is null) return;
+        OpenRunDrawer(_latestRunMeta.RunId);
     }
 
     private async Task DeleteSelectedTicket()

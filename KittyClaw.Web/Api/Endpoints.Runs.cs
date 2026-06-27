@@ -1,6 +1,8 @@
 using System.Text;
 using System.Text.Json;
 using KittyClaw.Core.Automation;
+using KittyClaw.Core.Automation.Runners;
+using KittyClaw.Core.Integrations.OpenCode;
 using KittyClaw.Core.Services;
 
 namespace KittyClaw.Web.Api;
@@ -18,6 +20,84 @@ public static partial class Endpoints
                 r.StartedAt, r.SessionId, status = r.Status.ToString(),
             })))
             .WithTags("Runs");
+
+        // Get the most recent run metadata for a ticket — used by the ticket drawer to
+        // show provider/model/worktree/session info without polling the runs registry.
+        api.MapGet("/projects/{slug}/tickets/{id:int}/runs/latest", async (string slug, int id, ITicketExecutionMetadataStore store) =>
+        {
+            var meta = await store.GetAsync(slug, id);
+            return meta is null ? Results.NotFound() : Results.Ok(meta);
+        }).WithTags("Runs");
+
+        // Get all run history for a project (filtered client-side by ticket id).
+        api.MapGet("/projects/{slug}/tickets/{id:int}/runs", async (string slug, int id, ITicketExecutionMetadataStore store) =>
+        {
+            var all = await store.GetByProjectAsync(slug);
+            var mine = all.Where(m => m.TicketId == id).ToList();
+            return Results.Ok(mine);
+        }).WithTags("Runs");
+
+        // OpenCode health check — used by the UI to decide whether to surface the runner.
+        api.MapGet("/projects/{slug}/opencode/health", (string slug, RunnerRegistry registry) =>
+        {
+            var opencode = registry.GetRunner("opencode");
+            if (opencode is null) return Results.Ok(new { available = false, reason = "not-registered" });
+            return Results.Ok(new { available = opencode.IsAvailable, kind = opencode.Kind });
+        }).WithTags("OpenCode");
+
+        // Trigger a manual run for a ticket via the RunnerRegistry — the runner is
+        // selected by ticket.ExecutionModeOverride (or the project default).
+        api.MapPost("/projects/{slug}/tickets/{id:int}/run", async (string slug, int id, StartRunRequest req,
+            TicketService ts, RunnerRegistry registry, AgentRunRegistry runRegistry, ProjectService ps) =>
+        {
+            var ticket = await ts.GetTicketAsync(slug, id);
+            if (ticket is null) return Results.NotFound();
+
+            // Determine which runner to use: ticket override → project default → Claude (legacy).
+            IAgentRunner? runner = null;
+            if (!string.IsNullOrEmpty(ticket.ExecutionModeOverride)
+                && Enum.TryParse<ExecutionMode>(ticket.ExecutionModeOverride, true, out var mode))
+            {
+                runner = registry.ResolveRunner(mode);
+            }
+            runner ??= registry.GetDefaultRunner();
+
+            if (runner is null) return Results.BadRequest(new { error = "No runner available." });
+
+            // Compose a minimal request from the ticket. Real prompt construction lives in
+            // the ActionExecutor path; this endpoint is for ad-hoc starts from the drawer.
+            var project = await ps.GetProjectAsync(slug);
+            var workspacePath = project is not null ? ps.ResolveWorkspacePath(project) : "";
+            var request = new AgentRunRequest
+            {
+                ProjectSlug = slug,
+                WorkspacePath = workspacePath,
+                AgentName = ticket.AssignedTo ?? req.Author,
+                SkillFile = $"{(ticket.AssignedTo ?? req.Author)}/SKILL.md",
+                TicketId = ticket.Id,
+                TicketTitle = ticket.Title,
+                TicketStatus = ticket.Status,
+                TicketDescription = ticket.Description,
+                Labels = ticket.Labels.Select(l => l.Name).ToList(),
+                Assignee = ticket.AssignedTo,
+                CurrentColumn = ticket.Status,
+                Prompt = ticket.Description,
+                ConcurrencyGroup = $"ticket-{ticket.Id}",
+                Provider = ticket.ProviderOverride,
+                Model = ticket.ModelOverride,
+                Profile = ticket.ProfileOverride
+            };
+
+            try
+            {
+                var result = await runner.StartAsync(request, CancellationToken.None);
+                return Results.Ok(new { runId = result.RunId, status = result.Status.ToString(), runner = runner.Kind });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { error = ex.Message, runner = runner.Kind });
+            }
+        }).WithTags("Runs");
 
         api.MapGet("/projects/{slug}/runs/{runId}", (string slug, string runId, AgentRunRegistry reg) =>
         {

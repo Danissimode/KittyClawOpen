@@ -4569,3 +4569,197 @@ details[open] .tool-call-summary::before { transform: rotate(90deg); }
     text-decoration: line-through;
     color: var(--text-dim);
 }
+
+/* ── Drawer tabs (Plan / Execution / Run) ───────────────────────────────── */
+.drawer-tabs {
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.75rem 1.5rem 0;
+    border-bottom: 1px solid var(--border-soft, rgba(255,255,255,0.08));
+    background: var(--panel-bg, rgba(255,255,255,0.02));
+}
+.drawer-tab {
+    background: transparent;
+    border: none;
+    padding: 0.5rem 1rem;
+    color: var(--text-dim, #888);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: color 120ms, border-color 120ms;
+}
+.drawer-tab:hover { color: var(--text-bright, #fff); }
+.drawer-tab.active {
+    color: var(--text-bright, #fff);
+    border-bottom-color: var(--accent, #6366f1);
+}
+.drawer-tab-content {
+    padding: 1rem 1.5rem 1.5rem;
+    overflow-y: auto;
+    max-height: 50vh;
+}
+
+/* ── Plan ──────────────────────────────────────────────────────────────── */
+.plan-status-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+.plan-badge {
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: rgba(99,102,241,0.18);
+    color: #a5b4fc;
+}
+.plan-badge.plan-approved { background: rgba(34,197,94,0.18); color: #86efac; }
+.plan-badge.plan-rejected { background: rgba(239,68,68,0.18); color: #fca5a5; }
+.plan-badge.plan-drafting,
+.plan-badge.plan-awaiting-approval { background: rgba(234,179,8,0.18); color: #fde68a; }
+.plan-approver { font-size: 0.78rem; color: var(--text-dim, #888); }
+.plan-editor {
+    width: 100%;
+    min-height: 160px;
+    background: var(--bg-soft, rgba(255,255,255,0.04));
+    color: var(--text-bright, #fff);
+    border: 1px solid var(--border-soft, rgba(255,255,255,0.1));
+    border-radius: 6px;
+    padding: 0.75rem;
+    font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+    font-size: 0.85rem;
+    resize: vertical;
+}
+.plan-body {
+    background: var(--bg-soft, rgba(255,255,255,0.04));
+    border: 1px solid var(--border-soft, rgba(255,255,255,0.08));
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    margin: 0.5rem 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.85rem;
+    color: var(--text-bright, #fff);
+}
+.plan-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    flex-wrap: wrap;
+}
+.plan-indicator { font-size: 0.6rem; vertical-align: middle; }
+.plan-indicator.plan-approved { color: #86efac; }
+.plan-indicator.plan-rejected { color: #fca5a5; }
+.plan-indicator.plan-drafting,
+.plan-indicator.plan-awaiting-approval { color: #fde68a; }
+
+/* ── Execution ─────────────────────────────────────────────────────────── */
+.execution-section .text-input {
+    width: 100%;
+    background: var(--bg-soft, rgba(255,255,255,0.04));
+    border: 1px solid var(--border-soft, rgba(255,255,255,0.1));
+    color: var(--text-bright, #fff);
+    padding: 0.45rem 0.6rem;
+    border-radius: 5px;
+    font-size: 0.88rem;
+}
+.health-indicator {
+    margin-top: 0.75rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: 5px;
+    font-size: 0.8rem;
+}
+.health-indicator.ok { background: rgba(34,197,94,0.12); color: #86efac; }
+.health-indicator.warn { background: rgba(234,179,8,0.12); color: #fde68a; }
+
+/* ── Run metadata ─────────────────────────────────────────────────────── */
+.run-meta-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+    margin: 0.5rem 0 1rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--bg-soft, rgba(255,255,255,0.04));
+    border-radius: 6px;
+    border: 1px solid var(--border-soft, rgba(255,255,255,0.08));
+}
+.run-meta-row {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    align-items: baseline;
+    gap: 0.5rem;
+}
+.run-meta-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    color: var(--text-dim, #888);
+    letter-spacing: 0.04em;
+}
+.run-meta-value {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.8rem;
+    color: var(--text-bright, #fff);
+    word-break: break-all;
+}
+.run-status {
+    display: inline-block;
+    font-size: 0.7rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.run-status.run-running { background: rgba(99,102,241,0.18); color: #a5b4fc; }
+.run-status.run-completed { background: rgba(34,197,94,0.18); color: #86efac; }
+.run-status.run-failed { background: rgba(239,68,68,0.18); color: #fca5a5; }
+.run-status.run-stopped { background: rgba(234,179,8,0.18); color: #fde68a; }
+.run-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+.run-controls {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px dashed var(--border-soft, rgba(255,255,255,0.08));
+}
+.run-loading { color: var(--text-dim, #888); font-size: 0.85rem; padding: 0.5rem 0; }
+.error-text { color: #fca5a5; font-size: 0.85rem; }
+
+/* Generic small action buttons used inside the Plan/Execution/Run tabs. */
+.btn-primary,
+.btn-secondary,
+.btn-warning {
+    padding: 0.4rem 0.85rem;
+    border-radius: 5px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 120ms;
+}
+.btn-primary {
+    background: var(--accent, #6366f1);
+    color: #fff;
+}
+.btn-primary:hover { background: var(--accent-hover, #4f46e5); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-secondary {
+    background: transparent;
+    color: var(--text-bright, #fff);
+    border-color: var(--border-soft, rgba(255,255,255,0.2));
+}
+.btn-secondary:hover { background: rgba(255,255,255,0.05); }
+.btn-warning {
+    background: rgba(234,179,8,0.15);
+    color: #fde68a;
+    border-color: rgba(234,179,8,0.3);
+}
+.btn-warning:hover { background: rgba(234,179,8,0.25); }
+
+.muted { color: var(--text-dim, #888); font-size: 0.85rem; }

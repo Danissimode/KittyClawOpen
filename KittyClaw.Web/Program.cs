@@ -95,6 +95,17 @@ builder.Services.AddSingleton<IAgentPromptBuilder, PromptBuilder>();
 builder.Services.AddSingleton<ClaudeRunner>();
 builder.Services.AddSingleton<CostTracker>();
 
+// Zone A: Core extension points (generic, not OpenCode-specific)
+builder.Services.AddSingleton<ITicketExecutionMetadataStore, TicketExecutionMetadataStore>();
+builder.Services.AddSingleton<IProviderModelCatalog, OpenCodeProviderModelCatalog>();
+builder.Services.AddSingleton<IExecutionPolicyService, OpenCodeExecutionPolicyService>();
+
+// Zone B: OpenCode integration
+builder.Services.AddSingleton<OpenCodeConfig>();
+builder.Services.AddSingleton<OpenCodePolicyConfig>();
+builder.Services.AddSingleton<OpenCodeRunner>();
+builder.Services.AddSingleton<IWorktreeService, WorktreeService>();
+
 
 // Configure RunnerRegistry with all available runners
 builder.Services.AddSingleton<RunnerRegistry>(sp =>

@@ -102,6 +102,38 @@ public class TicketService
         catch { /* column already exists */ }
     }
 
+    private static async Task EnsurePlanColumnsAsync(TodoDbContext db)
+    {
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Tickets ADD COLUMN PlanStatus TEXT NOT NULL DEFAULT 'none'"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Tickets ADD COLUMN PlanBody TEXT NULL"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Tickets ADD COLUMN PlanApprovedBy TEXT NULL"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Tickets ADD COLUMN PlanApprovedAt DATETIME NULL"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Tickets ADD COLUMN RequiresPlan INTEGER NOT NULL DEFAULT 0"); }
+        catch { /* column already exists */ }
+    }
+
+    private static async Task EnsureExecutionOverrideColumnsAsync(TodoDbContext db)
+    {
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Tickets ADD COLUMN ExecutionModeOverride TEXT NULL"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Tickets ADD COLUMN OpenCodeAgent TEXT NULL"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Tickets ADD COLUMN ProviderOverride TEXT NULL"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Tickets ADD COLUMN ModelOverride TEXT NULL"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Tickets ADD COLUMN ProfileOverride TEXT NULL"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Tickets ADD COLUMN UseWorktree INTEGER NOT NULL DEFAULT 1"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Tickets ADD COLUMN ForbiddenPaths TEXT NULL"); }
+        catch { /* column already exists */ }
+    }
+
     public async Task<List<TicketSummary>> ListTicketsAsync(string projectSlug, string? statusFilter = null, TicketPriority? priorityFilter = null, string? assignedTo = null, string? createdBy = null, string? search = null, int? parentId = null)
     {
         await using var db = _projectService.GetProjectDb(projectSlug);
@@ -111,6 +143,8 @@ public class TicketService
         await EnsureAssignedToColumnAsync(db);
         await EnsureParentIdColumnAsync(db);
         await EnsureOrchestrationColumnsAsync(db);
+        await EnsurePlanColumnsAsync(db);
+        await EnsureExecutionOverrideColumnsAsync(db);
         await ColumnService.EnsureBoardColumnsTableAsync(db);
         var query = db.Tickets.Include(t => t.Labels).AsQueryable();
         if (statusFilter is not null)
@@ -143,7 +177,14 @@ public class TicketService
                 RiskLevel = t.RiskLevel,
                 Reviewer = t.Reviewer,
                 RequiredEvidence = t.RequiredEvidence,
-                EvidenceCompleted = t.EvidenceCompleted
+                EvidenceCompleted = t.EvidenceCompleted,
+                PlanStatus = t.PlanStatus,
+                ExecutionModeOverride = t.ExecutionModeOverride,
+                OpenCodeAgent = t.OpenCodeAgent,
+                ProviderOverride = t.ProviderOverride,
+                ModelOverride = t.ModelOverride,
+                ProfileOverride = t.ProfileOverride,
+                UseWorktree = t.UseWorktree
             })
             .ToListAsync();
 
@@ -173,6 +214,8 @@ public class TicketService
         await EnsureParentIdColumnAsync(db);
         await EnsureAssignedToColumnAsync(db);
         await EnsureOrchestrationColumnsAsync(db);
+        await EnsurePlanColumnsAsync(db);
+        await EnsureExecutionOverrideColumnsAsync(db);
         var ticket = await db.Tickets
             .Include(t => t.Comments.OrderBy(c => c.CreatedAt))
             .Include(t => t.Activities.OrderBy(a => a.CreatedAt))
@@ -187,7 +230,7 @@ public class TicketService
         return ticket;
     }
 
-    public async Task<Ticket> CreateTicketAsync(string projectSlug, string title, string description = "", string createdBy = "owner", string status = "Backlog", List<int>? labelIds = null, TicketPriority priority = TicketPriority.NiceToHave, string? assignedTo = null, int? parentId = null, string? cliRuntimeId = null, string? caoRoleId = null, string? modelProfileId = null, string? riskLevel = null, string? reviewer = null, string? requiredEvidence = null)
+    public async Task<Ticket> CreateTicketAsync(string projectSlug, string title, string description = "", string createdBy = "owner", string status = "Backlog", List<int>? labelIds = null, TicketPriority priority = TicketPriority.NiceToHave, string? assignedTo = null, int? parentId = null, string? cliRuntimeId = null, string? caoRoleId = null, string? modelProfileId = null, string? riskLevel = null, string? reviewer = null, string? requiredEvidence = null, string? executionModeOverride = null, string? openCodeAgent = null, string? providerOverride = null, string? modelOverride = null, string? profileOverride = null, bool? useWorktree = null, string? forbiddenPaths = null)
     {
         if (string.IsNullOrWhiteSpace(createdBy))
             throw new InvalidOperationException("Le champ 'createdBy' est requis.");
@@ -199,6 +242,8 @@ public class TicketService
         await EnsureAssignedToColumnAsync(db);
         await EnsureParentIdColumnAsync(db);
         await EnsureOrchestrationColumnsAsync(db);
+        await EnsurePlanColumnsAsync(db);
+        await EnsureExecutionOverrideColumnsAsync(db);
         if (parentId is not null)
         {
             var parentExists = await db.Tickets.AnyAsync(t => t.Id == parentId.Value);
@@ -222,7 +267,14 @@ public class TicketService
             RiskLevel = riskLevel,
             Reviewer = reviewer,
             RequiredEvidence = requiredEvidence,
-            EvidenceCompleted = null
+            EvidenceCompleted = null,
+            ExecutionModeOverride = executionModeOverride,
+            OpenCodeAgent = openCodeAgent,
+            ProviderOverride = providerOverride,
+            ModelOverride = modelOverride,
+            ProfileOverride = profileOverride,
+            UseWorktree = useWorktree ?? true,
+            ForbiddenPaths = forbiddenPaths
         };
         if (labelIds is { Count: > 0 })
         {
@@ -269,7 +321,7 @@ public class TicketService
         return ticket;
     }
 
-    public async Task<Ticket?> UpdateTicketAsync(string projectSlug, int ticketId, string? title = null, string? description = null, string author = "owner", TicketPriority? priority = null, string? assignedTo = null, string? cliRuntimeId = null, string? caoRoleId = null, string? modelProfileId = null, string? riskLevel = null, string? reviewer = null, string? requiredEvidence = null, string? evidenceCompleted = null)
+    public async Task<Ticket?> UpdateTicketAsync(string projectSlug, int ticketId, string? title = null, string? description = null, string author = "owner", TicketPriority? priority = null, string? assignedTo = null, string? cliRuntimeId = null, string? caoRoleId = null, string? modelProfileId = null, string? riskLevel = null, string? reviewer = null, string? requiredEvidence = null, string? evidenceCompleted = null, string? executionModeOverride = null, string? openCodeAgent = null, string? providerOverride = null, string? modelOverride = null, string? profileOverride = null, bool? useWorktree = null, string? forbiddenPaths = null, string? planStatus = null, string? planBody = null, bool? requiresPlan = null)
     {
         if (string.IsNullOrWhiteSpace(author))
             throw new InvalidOperationException("Le champ 'author' est requis.");
@@ -279,6 +331,8 @@ public class TicketService
         await EnsureActivityTableAsync(db);
         await EnsureAssignedToColumnAsync(db);
         await EnsureOrchestrationColumnsAsync(db);
+        await EnsurePlanColumnsAsync(db);
+        await EnsureExecutionOverrideColumnsAsync(db);
         var ticket = await db.Tickets.FindAsync(ticketId);
         if (ticket is null) return null;
 
@@ -395,7 +449,179 @@ public class TicketService
                 Text = "a mis à jour l'état des preuves"
             });
         }
+        if (executionModeOverride is not null && executionModeOverride != ticket.ExecutionModeOverride)
+        {
+            ticket.ExecutionModeOverride = executionModeOverride.Length == 0 ? null : executionModeOverride;
+            db.ActivityEntries.Add(new ActivityEntry
+            {
+                TicketId = ticketId,
+                Author = author,
+                Text = $"a changé le mode d'exécution : {ticket.ExecutionModeOverride ?? "hérit du projet"}"
+            });
+        }
+        if (openCodeAgent is not null && openCodeAgent != ticket.OpenCodeAgent)
+        {
+            ticket.OpenCodeAgent = openCodeAgent.Length == 0 ? null : openCodeAgent;
+            db.ActivityEntries.Add(new ActivityEntry
+            {
+                TicketId = ticketId,
+                Author = author,
+                Text = $"a changé l'agent OpenCode : {ticket.OpenCodeAgent ?? "défaut"}"
+            });
+        }
+        if (providerOverride is not null && providerOverride != ticket.ProviderOverride)
+        {
+            ticket.ProviderOverride = providerOverride.Length == 0 ? null : providerOverride;
+            db.ActivityEntries.Add(new ActivityEntry
+            {
+                TicketId = ticketId,
+                Author = author,
+                Text = $"a changé le provider : {ticket.ProviderOverride ?? "hérit du projet"}"
+            });
+        }
+        if (modelOverride is not null && modelOverride != ticket.ModelOverride)
+        {
+            ticket.ModelOverride = modelOverride.Length == 0 ? null : modelOverride;
+            db.ActivityEntries.Add(new ActivityEntry
+            {
+                TicketId = ticketId,
+                Author = author,
+                Text = $"a changé le modèle : {ticket.ModelOverride ?? "hérit du projet"}"
+            });
+        }
+        if (profileOverride is not null && profileOverride != ticket.ProfileOverride)
+        {
+            ticket.ProfileOverride = profileOverride.Length == 0 ? null : profileOverride;
+            db.ActivityEntries.Add(new ActivityEntry
+            {
+                TicketId = ticketId,
+                Author = author,
+                Text = $"a changé le profil : {ticket.ProfileOverride ?? "défaut"}"
+            });
+        }
+        if (useWorktree.HasValue && useWorktree.Value != ticket.UseWorktree)
+        {
+            ticket.UseWorktree = useWorktree.Value;
+            db.ActivityEntries.Add(new ActivityEntry
+            {
+                TicketId = ticketId,
+                Author = author,
+                Text = $"a {(useWorktree.Value ? "activé" : "désactivé")} le worktree par carte"
+            });
+        }
+        if (forbiddenPaths is not null && forbiddenPaths != ticket.ForbiddenPaths)
+        {
+            ticket.ForbiddenPaths = forbiddenPaths.Length == 0 ? null : forbiddenPaths;
+            db.ActivityEntries.Add(new ActivityEntry
+            {
+                TicketId = ticketId,
+                Author = author,
+                Text = "a mis à jour les chemins interdits"
+            });
+        }
+        if (planStatus is not null && planStatus != ticket.PlanStatus)
+        {
+            ticket.PlanStatus = planStatus;
+            db.ActivityEntries.Add(new ActivityEntry
+            {
+                TicketId = ticketId,
+                Author = author,
+                Text = $"a changé le statut du plan : {planStatus}"
+            });
+        }
+        if (planBody is not null && planBody != ticket.PlanBody)
+        {
+            ticket.PlanBody = planBody.Length == 0 ? null : planBody;
+            db.ActivityEntries.Add(new ActivityEntry
+            {
+                TicketId = ticketId,
+                Author = author,
+                Text = "a mis à jour le corps du plan"
+            });
+        }
+        if (requiresPlan.HasValue && requiresPlan.Value != ticket.RequiresPlan)
+        {
+            ticket.RequiresPlan = requiresPlan.Value;
+            db.ActivityEntries.Add(new ActivityEntry
+            {
+                TicketId = ticketId,
+                Author = author,
+                Text = $"a {(requiresPlan.Value ? "activé" : "désactivé")} l'obligation d'un plan approuvé"
+            });
+        }
         ticket.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        return ticket;
+    }
+
+    /// <summary>
+    /// Mark the current plan as approved by a specific user.
+    /// </summary>
+    public async Task<Ticket?> ApprovePlanAsync(string projectSlug, int ticketId, string approvedBy)
+    {
+        await using var db = _projectService.GetProjectDb(projectSlug);
+        await EnsurePlanColumnsAsync(db);
+        var ticket = await db.Tickets.FindAsync(ticketId);
+        if (ticket is null) return null;
+        if (string.IsNullOrWhiteSpace(ticket.PlanBody))
+            throw new InvalidOperationException("Aucun plan à approuver.");
+        ticket.PlanStatus = PlanStatuses.Approved;
+        ticket.PlanApprovedBy = approvedBy;
+        ticket.PlanApprovedAt = DateTime.UtcNow;
+        ticket.UpdatedAt = DateTime.UtcNow;
+        db.ActivityEntries.Add(new ActivityEntry
+        {
+            TicketId = ticketId,
+            Author = approvedBy,
+            Text = "a approuvé le plan d'exécution"
+        });
+        await db.SaveChangesAsync();
+        return ticket;
+    }
+
+    /// <summary>
+    /// Mark the current plan as rejected.
+    /// </summary>
+    public async Task<Ticket?> RejectPlanAsync(string projectSlug, int ticketId, string rejectedBy, string? reason = null)
+    {
+        await using var db = _projectService.GetProjectDb(projectSlug);
+        await EnsurePlanColumnsAsync(db);
+        var ticket = await db.Tickets.FindAsync(ticketId);
+        if (ticket is null) return null;
+        ticket.PlanStatus = PlanStatuses.Rejected;
+        ticket.UpdatedAt = DateTime.UtcNow;
+        db.ActivityEntries.Add(new ActivityEntry
+        {
+            TicketId = ticketId,
+            Author = rejectedBy,
+            Text = string.IsNullOrEmpty(reason)
+                ? "a rejeté le plan d'exécution"
+                : $"a rejeté le plan : {reason}"
+        });
+        await db.SaveChangesAsync();
+        return ticket;
+    }
+
+    /// <summary>
+    /// Reset the plan back to none so a new plan can be drafted.
+    /// </summary>
+    public async Task<Ticket?> ResetPlanAsync(string projectSlug, int ticketId, string resetBy)
+    {
+        await using var db = _projectService.GetProjectDb(projectSlug);
+        await EnsurePlanColumnsAsync(db);
+        var ticket = await db.Tickets.FindAsync(ticketId);
+        if (ticket is null) return null;
+        ticket.PlanStatus = PlanStatuses.None;
+        ticket.PlanBody = null;
+        ticket.PlanApprovedBy = null;
+        ticket.PlanApprovedAt = null;
+        ticket.UpdatedAt = DateTime.UtcNow;
+        db.ActivityEntries.Add(new ActivityEntry
+        {
+            TicketId = ticketId,
+            Author = resetBy,
+            Text = "a réinitialisé le plan"
+        });
         await db.SaveChangesAsync();
         return ticket;
     }

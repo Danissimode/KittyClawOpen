@@ -21,9 +21,43 @@ public class Ticket
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public int? ParentId { get; set; }
 
+    // ── Plan workflow ───────────────────────────────────────────────────
+    /// <summary>Current plan status: none, drafting, awaiting-approval, approved, rejected.</summary>
+    public string PlanStatus { get; set; } = "none";
+    /// <summary>Plan body — what the agent will do, step by step.</summary>
+    public string? PlanBody { get; set; }
+    public string? PlanApprovedBy { get; set; }
+    public DateTime? PlanApprovedAt { get; set; }
+    public bool RequiresPlan { get; set; } = false;
+
+    // ── Execution overrides (per-ticket) ────────────────────────────────
+    /// <summary>Execution mode override: LegacyClaude, DirectOpenCode, CaoGoverned, TeamWorkflow, Manual, or null=inherit.</summary>
+    public string? ExecutionModeOverride { get; set; }
+    /// <summary>OpenCode agent override: build, plan, or custom agent name.</summary>
+    public string? OpenCodeAgent { get; set; }
+    /// <summary>Provider override (openrouter, anthropic, openai, ollama, litellm, etc.).</summary>
+    public string? ProviderOverride { get; set; }
+    /// <summary>Model override (provider-specific model id).</summary>
+    public string? ModelOverride { get; set; }
+    /// <summary>Profile override (developer, planner, reviewer, etc.).</summary>
+    public string? ProfileOverride { get; set; }
+    /// <summary>Whether this ticket must run inside its own worktree.</summary>
+    public bool UseWorktree { get; set; } = true;
+    /// <summary>Optional forbidden paths for this ticket (comma-separated glob patterns).</summary>
+    public string? ForbiddenPaths { get; set; }
+
     public List<Comment> Comments { get; set; } = [];
     public List<ActivityEntry> Activities { get; set; } = [];
     public List<Label> Labels { get; set; } = [];
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public List<SubTicketInfo> SubTickets { get; set; } = [];
+}
+
+public static class PlanStatuses
+{
+    public const string None = "none";
+    public const string Drafting = "drafting";
+    public const string AwaitingApproval = "awaiting-approval";
+    public const string Approved = "approved";
+    public const string Rejected = "rejected";
 }

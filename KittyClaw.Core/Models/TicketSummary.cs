@@ -25,6 +25,13 @@ public record TicketSummary(
     public string? Reviewer { get; init; }
     public string? RequiredEvidence { get; init; }
     public string? EvidenceCompleted { get; init; }
+    public string PlanStatus { get; init; } = PlanStatuses.None;
+    public string? ExecutionModeOverride { get; init; }
+    public string? OpenCodeAgent { get; init; }
+    public string? ProviderOverride { get; init; }
+    public string? ModelOverride { get; init; }
+    public string? ProfileOverride { get; init; }
+    public bool UseWorktree { get; init; } = true;
 }
 
 public record SubTicketInfo(int Id, string Title, string Status, string? AssignedTo);

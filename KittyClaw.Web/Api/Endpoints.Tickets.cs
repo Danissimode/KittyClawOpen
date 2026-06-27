@@ -13,12 +13,12 @@ public static partial class Endpoints
             .WithTags("Tickets")
             .Produces<List<TicketSummary>>();
 
-        api.MapPost("/projects/{slug}/tickets", async (string slug, CreateTicketRequest req, TicketService ts, BoardUpdateNotifier notifier) =>
+api.MapPost("/projects/{slug}/tickets", async (string slug, CreateTicketRequest req, TicketService ts, BoardUpdateNotifier notifier) =>
         {
             try
             {
-                var ticket = await ts.CreateTicketAsync(slug, req.Title, req.Description, req.CreatedBy, req.Status, req.LabelIds, req.Priority, req.AssignedTo, req.ParentId, req.CliRuntimeId, req.CaoRoleId, req.ModelProfileId, req.RiskLevel, req.Reviewer, req.RequiredEvidence);
-                notifier.NotifyProjectUpdated(slug);
+                var ticket = await ts.CreateTicketAsync(slug, req.Title, req.Description, req.CreatedBy, req.Status, req.LabelIds, req.Priority, req.AssignedTo, req.ParentId, req.CliRuntimeId, req.CaoRoleId, req.ModelProfileId, req.RiskLevel, req.Reviewer, req.RequiredEvidence, req.ExecutionModeOverride, req.OpenCodeAgent, req.ProviderOverride, req.ModelOverride, req.ProfileOverride, req.UseWorktree, req.ForbiddenPaths);
+                if (ticket is not null) notifier.NotifyProjectUpdated(slug);
                 return Results.Created($"/api/projects/{slug}/tickets/{ticket.Id}", ticket);
             }
             catch (InvalidOperationException ex)
@@ -33,7 +33,7 @@ public static partial class Endpoints
         {
             try
             {
-                var ticket = await ts.UpdateTicketAsync(slug, id, req.Title, req.Description, req.Author, req.Priority, req.AssignedTo, req.CliRuntimeId, req.CaoRoleId, req.ModelProfileId, req.RiskLevel, req.Reviewer, req.RequiredEvidence, req.EvidenceCompleted);
+                var ticket = await ts.UpdateTicketAsync(slug, id, req.Title, req.Description, req.Author, req.Priority, req.AssignedTo, req.CliRuntimeId, req.CaoRoleId, req.ModelProfileId, req.RiskLevel, req.Reviewer, req.RequiredEvidence, req.EvidenceCompleted, req.ExecutionModeOverride, req.OpenCodeAgent, req.ProviderOverride, req.ModelOverride, req.ProfileOverride, req.UseWorktree, req.ForbiddenPaths, req.PlanStatus, req.PlanBody, req.RequiresPlan);
                 if (ticket is not null && req.LabelIds is not null)
                     await ts.SetTicketLabelsAsync(slug, id, req.LabelIds);
                 if (ticket is not null) notifier.NotifyProjectUpdated(slug);
@@ -96,6 +96,42 @@ public static partial class Endpoints
             if (ok) notifier.NotifyProjectUpdated(slug);
             return ok ? Results.NoContent() : Results.NotFound();
         }).WithTags("Tickets");
+
+        // Plan workflow
+        api.MapPost("/projects/{slug}/tickets/{id:int}/plan/approve", async (string slug, int id, ApprovePlanRequest req, TicketService ts, BoardUpdateNotifier notifier) =>
+        {
+            try
+            {
+                var ticket = await ts.ApprovePlanAsync(slug, id, req.ApprovedBy);
+                if (ticket is not null) notifier.NotifyProjectUpdated(slug);
+                return ticket is null ? Results.NotFound() : Results.Ok(ticket);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        }).WithTags("Plan").Produces<Ticket>().ProducesProblem(StatusCodes.Status400BadRequest);
+
+        api.MapPost("/projects/{slug}/tickets/{id:int}/plan/reject", async (string slug, int id, RejectPlanRequest req, TicketService ts, BoardUpdateNotifier notifier) =>
+        {
+            try
+            {
+                var ticket = await ts.RejectPlanAsync(slug, id, req.RejectedBy, req.Reason);
+                if (ticket is not null) notifier.NotifyProjectUpdated(slug);
+                return ticket is null ? Results.NotFound() : Results.Ok(ticket);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        }).WithTags("Plan").Produces<Ticket>().ProducesProblem(StatusCodes.Status400BadRequest);
+
+        api.MapPost("/projects/{slug}/tickets/{id:int}/plan/reset", async (string slug, int id, ResetPlanRequest req, TicketService ts, BoardUpdateNotifier notifier) =>
+        {
+            var ticket = await ts.ResetPlanAsync(slug, id, req.ResetBy);
+            if (ticket is not null) notifier.NotifyProjectUpdated(slug);
+            return ticket is null ? Results.NotFound() : Results.Ok(ticket);
+        }).WithTags("Plan").Produces<Ticket>();
 
         // Comments
         api.MapPost("/projects/{slug}/tickets/{id:int}/comments", async (string slug, int id, AddCommentRequest req, TicketService ts, BoardUpdateNotifier notifier) =>
