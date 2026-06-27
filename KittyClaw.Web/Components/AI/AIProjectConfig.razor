@@ -1,0 +1,149 @@
+@using KittyClaw.Core.AI.Services
+@using Microsoft.AspNetCore.Components
+
+<div class="ai-project-config card">
+    <div class="card-header">
+        <h5>AI Configuration for Project: @ProjectSlug</h5>
+    </div>
+    <div class="card-body">
+        <EditForm Model="@Config" OnValidSubmit="SaveConfig">
+            <DataAnnotationsValidator />
+            
+            <div class="form-group">
+                <label>Default AI Provider</label>
+                <AIProviderSelector 
+                    ProjectSlug="ProjectSlug" 
+                    SelectedProviderId="Config.DefaultProviderId"
+                    SelectedProviderIdChanged="Config.DefaultProviderId = $event"
+                    SelectedModelId="Config.DefaultModelId"
+                    SelectedModelIdChanged="Config.DefaultModelId = $event"
+                    ShowAdvancedOptions="false" />
+            </div>
+            
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary" disabled="@IsSaving">
+                    @(IsSaving ? "Saving..." : "Save Configuration")
+                </button>
+            </div>
+        </EditForm>
+        
+        <div class="mt-4">
+            <h6>Available Providers</h6>
+            @if (IsLoadingProviders)
+            {
+                <p>Loading providers...</p>
+            }
+            else
+            {
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Provider</th>
+                            <th>Status</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var provider in AvailableProviders)
+                        {
+                            <tr>
+                                <td>@provider.DisplayName</td>
+                                <td>
+                                    <span class="badge @(provider.IsAvailable ? "badge-success" : "badge-warning")">
+                                        @(provider.IsAvailable ? "Available" : "Unavailable")
+                                    </span>
+                                </td>
+                                <td>@provider.Description</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string ProjectSlug { get; set; } = string.Empty;
+    
+    [Parameter]
+    public EventCallback OnConfigSaved { get; set; }
+    
+    [Inject]
+    private IAIProviderService AIProviderService { get; set; } = default!;
+    
+    private ProjectAIConfig Config { get; set; } = new();
+    private bool IsSaving { get; set; } = false;
+    private bool IsLoading { get; set; } = true;
+    private bool IsLoadingProviders { get; set; } = true;
+    private List<ProviderInfo> AvailableProviders { get; set; } = new();
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.WhenAll(LoadConfig(), LoadProviders());
+    }
+    
+    private async Task LoadConfig()
+    {
+        IsLoading = true;
+        try
+        {
+            var effectiveConfig = await AIProviderService.GetEffectiveConfigAsync(ProjectSlug);
+            
+            Config = new ProjectAIConfig
+            {
+                DefaultProviderId = effectiveConfig.ProviderId,
+                DefaultModelId = effectiveConfig.ModelId,
+                ProviderOptions = effectiveConfig.Options
+            };
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex, "Failed to load project AI config");
+            Config = new ProjectAIConfig();
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+    
+    private async Task LoadProviders()
+    {
+        IsLoadingProviders = true;
+        try
+        {
+            AvailableProviders = (await AIProviderService.GetAvailableProvidersAsync(ProjectSlug))
+                .OrderBy(p => p.DisplayName)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex, "Failed to load available providers");
+            AvailableProviders = new();
+        }
+        finally
+        {
+            IsLoadingProviders = false;
+        }
+    }
+    
+    private async Task SaveConfig()
+    {
+        IsSaving = true;
+        try
+        {
+            await AIProviderService.SetProjectProviderConfigAsync(ProjectSlug, Config);
+            await OnConfigSaved.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex, "Failed to save project AI config");
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+}

@@ -1,0 +1,161 @@
+{
+  "$schema": "https://raw.githubusercontent.com/opencode-ai/opencode/main/packages/server/src/config/schema.json",
+  
+  "server": {
+    "port": 1234,
+    "host": "localhost",
+    "apiKey": "your-opencode-server-api-key",
+    "logLevel": "info",
+    "cors": {
+      "origins": ["http://localhost:5230", "http://localhost:*"],
+      "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      "headers": ["Content-Type", "Authorization"]
+    }
+  },
+  
+  "providers": {
+    "openai": {
+      "enabled": true,
+      "apiKey": "your-openai-api-key",
+      "baseUrl": "https://api.openai.com/v1",
+      "models": {
+        "gpt-4o": {
+          "name": "GPT-4o",
+          "contextLength": 128000,
+          "pricing": {
+            "prompt": 0.000005,
+            "completion": 0.000015
+          }
+        },
+        "gpt-4": {
+          "name": "GPT-4",
+          "contextLength": 8192,
+          "pricing": {
+            "prompt": 0.00003,
+            "completion": 0.00006
+          }
+        },
+        "gpt-3.5-turbo": {
+          "name": "GPT-3.5 Turbo",
+          "contextLength": 16384,
+          "pricing": {
+            "prompt": 0.0000005,
+            "completion": 0.0000015
+          }
+        }
+      }
+    },
+    
+    "anthropic": {
+      "enabled": true,
+      "apiKey": "your-claude-api-key",
+      "baseUrl": "https://api.anthropic.com",
+      "models": {
+        "claude-3-sonnet-20240229": {
+          "name": "Claude 3 Sonnet",
+          "contextLength": 200000,
+          "pricing": {
+            "prompt": 0.000003,
+            "completion": 0.000015
+          }
+        },
+        "claude-3-haiku-20240307": {
+          "name": "Claude 3 Haiku",
+          "contextLength": 200000,
+          "pricing": {
+            "prompt": 0.00000025,
+            "completion": 0.00000125
+          }
+        },
+        "claude-3-opus-20240229": {
+          "name": "Claude 3 Opus",
+          "contextLength": 200000,
+          "pricing": {
+            "prompt": 0.000015,
+            "completion": 0.000075
+          }
+        },
+        "claude-2:1": {
+          "name": "Claude 2.1",
+          "contextLength": 200000,
+          "pricing": {
+            "prompt": 0.000011025,
+            "completion": 0.000032675
+          }
+        }
+      }
+    },
+    
+    "minimax": {
+      "enabled": true,
+      "apiKey": "your-minimax-api-key",
+      "baseUrl": "https://api.minimax.chat/v1",
+      "models": {
+        "minimax-pro": {
+          "name": "MiniMax Pro",
+          "contextLength": 32768,
+          "pricing": {
+            "prompt": 0.0000015,
+            "completion": 0.0000045
+          }
+        }
+      }
+    },
+    
+    "deepseek": {
+      "enabled": true,
+      "apiKey": "your-deepseek-api-key",
+      "baseUrl": "https://api.deepseek.com/v1",
+      "models": {
+        "deepseek-chat": {
+          "name": "DeepSeek Chat",
+          "contextLength": 32768,
+          "pricing": {
+            "prompt": 0.0000005,
+            "completion": 0.0000015
+          }
+        }
+      }
+    },
+    
+    "google": {
+      "enabled": true,
+      "apiKey": "your-google-api-key",
+      "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
+      "models": {
+        "gemini-pro": {
+          "name": "Gemini Pro",
+          "contextLength": 32768,
+          "pricing": {
+            "prompt": 0.00000025,
+            "completion": 0.0000005
+          }
+        }
+      }
+    },
+    
+    "mistral": {
+      "enabled": true,
+      "apiKey": "your-mistral-api-key",
+      "baseUrl": "https://api.mistral.ai/v1",
+      "models": {
+        "mistral-large": {
+          "name": "Mistral Large",
+          "contextLength": 32768,
+          "pricing": {
+            "prompt": 0.00000025,
+            "completion": 0.00000075
+          }
+        }
+      }
+    }
+  },
+  
+  "options": {
+    "streaming": true,
+    "maxTokens": 4096,
+    "temperature": 0.7,
+    "topP": 0.9,
+    "topK": 50
+  }
+}

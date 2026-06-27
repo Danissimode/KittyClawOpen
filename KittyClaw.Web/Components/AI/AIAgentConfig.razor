@@ -1,0 +1,126 @@
+@using KittyClaw.Core.AI.Services
+@using Microsoft.AspNetCore.Components
+
+<div class="ai-agent-config card">
+    <div class="card-header">
+        <h5>AI Configuration for @AgentName</h5>
+    </div>
+    <div class="card-body">
+        <EditForm Model="@Config" OnValidSubmit="SaveConfig">
+            <DataAnnotationsValidator />
+            
+            <div class="form-group">
+                <label>Override Project Settings</label>
+                <input type="checkbox" @bind="Config.OverrideProjectSettings" class="form-check-input" />
+                <small class="form-text text-muted">
+                    Enable to use custom AI settings for this agent
+                </small>
+            </div>
+            
+            @if (Config.OverrideProjectSettings)
+            {
+                <div class="mt-3">
+                    <AIProviderSelector 
+                        ProjectSlug="ProjectSlug" 
+                        AgentName="AgentName"
+                        SelectedProviderId="Config.ProviderId"
+                        SelectedProviderIdChanged="Config.ProviderId = $event"
+                        SelectedModelId="Config.ModelId"
+                        SelectedModelIdChanged="Config.ModelId = $event"
+                        ShowAdvancedOptions="true" />
+                </div>
+            }
+            
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary" disabled="@IsSaving">
+                    @(IsSaving ? "Saving..." : "Save Configuration")
+                </button>
+                @if (Config.OverrideProjectSettings)
+                {
+                    <button type="button" class="btn btn-outline-secondary ml-2" @onclick="ResetToDefaults">
+                        Reset to Project Defaults
+                    </button>
+                }
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string ProjectSlug { get; set; } = string.Empty;
+    
+    [Parameter]
+    public string AgentName { get; set; } = string.Empty;
+    
+    [Parameter]
+    public EventCallback OnConfigSaved { get; set; }
+    
+    [Inject]
+    private IAIProviderService AIProviderService { get; set; } = default!;
+    
+    private AgentAIConfig Config { get; set; } = new();
+    private bool IsSaving { get; set; } = false;
+    private bool IsLoading { get; set; } = true;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadConfig();
+    }
+    
+    private async Task LoadConfig()
+    {
+        IsLoading = true;
+        try
+        {
+            var effectiveConfig = await AIProviderService.GetEffectiveConfigAsync(
+                ProjectSlug, null, AgentName);
+            
+            Config = new AgentAIConfig
+            {
+                OverrideProjectSettings = false,
+                ProviderId = effectiveConfig.ProviderId,
+                ModelId = effectiveConfig.ModelId
+            };
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex, "Failed to load agent AI config");
+            Config = new AgentAIConfig();
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+    
+    private async Task SaveConfig()
+    {
+        IsSaving = true;
+        try
+        {
+            await AIProviderService.SetAgentProviderConfigAsync(
+                ProjectSlug, AgentName, Config);
+            
+            await OnConfigSaved.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex, "Failed to save agent AI config");
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+    
+    private void ResetToDefaults()
+    {
+        Config = new AgentAIConfig
+        {
+            OverrideProjectSettings = false,
+            ProviderId = null,
+            ModelId = null
+        };
+    }
+}

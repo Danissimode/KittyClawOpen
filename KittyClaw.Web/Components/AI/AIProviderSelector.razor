@@ -1,0 +1,193 @@
+@using KittyClaw.Core.AI.Providers
+@using KittyClaw.Core.AI.Services
+@using Microsoft.AspNetCore.Components
+
+<div class="ai-provider-selector">
+    <div class="form-group">
+        <label>AI Provider</label>
+        <select @bind="SelectedProviderId" class="form-control" @onchange="OnProviderChanged">
+            @foreach (var provider in AvailableProviders)
+            {
+                <option value="@provider.Id">@provider.DisplayName</option>
+            }
+        </select>
+    </div>
+    
+    @if (SelectedProviderId != null)
+    {
+        <div class="form-group mt-2">
+            <label>Model</label>
+            <select @bind="SelectedModelId" class="form-control" disabled="@IsLoadingModels">
+                @if (IsLoadingModels)
+                {
+                    <option value="">Loading models...</option>
+                }
+                else
+                {
+                    @foreach (var model in AvailableModels)
+                    {
+                        <option value="@model.Id">@model.Name (@model.ProviderId)</option>
+                    }
+                }
+            </select>
+        </div>
+    }
+    
+    @if (ShowAdvancedOptions)
+    {
+        <div class="mt-3">
+            <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleAdvancedOptions">
+                @(ShowAdvancedOptions ? "Hide Advanced" : "Show Advanced")
+            </button>
+            
+            @if (ShowAdvancedOptions)
+            {
+                <div class="advanced-options mt-2 p-2 border rounded">
+                    <div class="form-group">
+                        <label>Temperature</label>
+                        <input type="range" min="0" max="2" step="0.1" @bind="Temperature" class="form-control-range" />
+                        <small>@Temperature.ToString("F1")</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Max Tokens</label>
+                        <input type="number" @bind="MaxTokens" class="form-control" placeholder="Optional" />
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string? ProjectSlug { get; set; }
+    
+    [Parameter]
+    public int? TicketId { get; set; }
+    
+    [Parameter]
+    public string? AgentName { get; set; }
+    
+    [Parameter]
+    public string? SelectedProviderId { get; set; }
+    
+    [Parameter]
+    public EventCallback<string> SelectedProviderIdChanged { get; set; }
+    
+    [Parameter]
+    public string? SelectedModelId { get; set; }
+    
+    [Parameter]
+    public EventCallback<string> SelectedModelIdChanged { get; set; }
+    
+    [Parameter]
+    public bool ShowAdvancedOptions { get; set; } = false;
+    
+    [Parameter]
+    public double Temperature { get; set; } = 0.7;
+    
+    [Parameter]
+    public EventCallback<double> TemperatureChanged { get; set; }
+    
+    [Parameter]
+    public int? MaxTokens { get; set; }
+    
+    [Parameter]
+    public EventCallback<int?> MaxTokensChanged { get; set; }
+    
+    [Inject]
+    private IAIProviderService AIProviderService { get; set; } = default!;
+    
+    private List<ProviderInfo> AvailableProviders { get; set; } = new();
+    private List<ModelInfo> AvailableModels { get; set; } = new();
+    private bool IsLoadingModels { get; set; } = false;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProviders();
+        
+        if (!string.IsNullOrEmpty(SelectedProviderId))
+        {
+            await LoadModels(SelectedProviderId);
+        }
+    }
+    
+    private async Task LoadProviders()
+    {
+        if (string.IsNullOrEmpty(ProjectSlug))
+        {
+            var providers = AIProviderService.GetAllProviders()
+                .Select(p => new ProviderInfo
+                {
+                    Id = p.Id,
+                    DisplayName = p.DisplayName,
+                    Description = p.Description,
+                    IsAvailable = true,
+                    IsConfigured = true
+                }).ToList();
+            
+            AvailableProviders = providers;
+        }
+        else
+        {
+            AvailableProviders = (await AIProviderService.GetAvailableProvidersAsync(ProjectSlug))
+                .OrderBy(p => p.DisplayName)
+                .ToList();
+        }
+        
+        // If no provider selected and we have providers, select the first available one
+        if (string.IsNullOrEmpty(SelectedProviderId) && AvailableProviders.Any())
+        {
+            SelectedProviderId = AvailableProviders.First().Id;
+            await SelectedProviderIdChanged.InvokeAsync(SelectedProviderId);
+            await LoadModels(SelectedProviderId);
+        }
+    }
+    
+    private async Task LoadModels(string providerId)
+    {
+        if (string.IsNullOrEmpty(ProjectSlug) || string.IsNullOrEmpty(providerId))
+        {
+            AvailableModels = new();
+            return;
+        }
+        
+        IsLoadingModels = true;
+        StateHasChanged();
+        
+        try
+        {
+            AvailableModels = (await AIProviderService.GetAvailableModelsAsync(ProjectSlug, providerId))
+                .OrderBy(m => m.Name)
+                .ToList();
+            
+            // If no model selected and we have models, select the first one
+            if (string.IsNullOrEmpty(SelectedModelId) && AvailableModels.Any())
+            {
+                SelectedModelId = AvailableModels.First().Id;
+                await SelectedModelIdChanged.InvokeAsync(SelectedModelId);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log error
+            Console.Error.WriteLine(ex, "Failed to load models");
+            AvailableModels = new();
+        }
+        finally
+        {
+            IsLoadingModels = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task OnProviderChanged(FocusEventArgs e)
+    {
+        await LoadModels(SelectedProviderId!);
+    }
+    
+    private void ToggleAdvancedOptions()
+    {
+        ShowAdvancedOptions = !ShowAdvancedOptions;
+    }
+}

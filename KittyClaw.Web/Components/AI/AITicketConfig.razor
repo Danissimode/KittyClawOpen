@@ -1,0 +1,129 @@
+@using KittyClaw.Core.AI.Services
+@using Microsoft.AspNetCore.Components
+
+<div class="ai-ticket-config card">
+    <div class="card-header">
+        <h5>AI Configuration for Ticket #@TicketId</h5>
+    </div>
+    <div class="card-body">
+        <EditForm Model="@Config" OnValidSubmit="SaveConfig">
+            <DataAnnotationsValidator />
+            
+            <div class="form-group">
+                <label>Override Project Settings</label>
+                <input type="checkbox" @bind="Config.OverrideProjectSettings" class="form-check-input" />
+                <small class="form-text text-muted">
+                    Enable to use custom AI settings for this ticket
+                </small>
+            </div>
+            
+            @if (Config.OverrideProjectSettings)
+            {
+                <div class="mt-3">
+                    <AIProviderSelector 
+                        ProjectSlug="ProjectSlug" 
+                        TicketId="TicketId"
+                        SelectedProviderId="Config.ProviderId"
+                        SelectedProviderIdChanged="Config.ProviderId = $event"
+                        SelectedModelId="Config.ModelId"
+                        SelectedModelIdChanged="Config.ModelId = $event"
+                        ShowAdvancedOptions="true" />
+                </div>
+            }
+            
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary" disabled="@IsSaving">
+                    @(IsSaving ? "Saving..." : "Save Configuration")
+                </button>
+                @if (Config.OverrideProjectSettings)
+                {
+                    <button type="button" class="btn btn-outline-secondary ml-2" @onclick="ResetToDefaults">
+                        Reset to Project Defaults
+                    </button>
+                }
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string ProjectSlug { get; set; } = string.Empty;
+    
+    [Parameter]
+    public int TicketId { get; set; }
+    
+    [Parameter]
+    public EventCallback OnConfigSaved { get; set; }
+    
+    [Inject]
+    private IAIProviderService AIProviderService { get; set; } = default!;
+    
+    private TicketAIConfig Config { get; set; } = new();
+    private bool IsSaving { get; set; } = false;
+    private bool IsLoading { get; set; } = true;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadConfig();
+    }
+    
+    private async Task LoadConfig()
+    {
+        IsLoading = true;
+        try
+        {
+            var effectiveConfig = await AIProviderService.GetEffectiveConfigAsync(
+                ProjectSlug, TicketId, null);
+            
+            // Check if there's a ticket-specific config
+            // For now, we'll use a simple approach - in real implementation, 
+            // we'd load from database
+            Config = new TicketAIConfig
+            {
+                OverrideProjectSettings = false,
+                ProviderId = effectiveConfig.ProviderId,
+                ModelId = effectiveConfig.ModelId
+            };
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex, "Failed to load ticket AI config");
+            Config = new TicketAIConfig();
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+    
+    private async Task SaveConfig()
+    {
+        IsSaving = true;
+        try
+        {
+            await AIProviderService.SetTicketProviderConfigAsync(
+                ProjectSlug, TicketId, Config);
+            
+            await OnConfigSaved.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex, "Failed to save ticket AI config");
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+    
+    private void ResetToDefaults()
+    {
+        Config = new TicketAIConfig
+        {
+            OverrideProjectSettings = false,
+            ProviderId = null,
+            ModelId = null
+        };
+    }
+}
