@@ -9,7 +9,7 @@ namespace KittyClaw.Core.Automation.Runners;
 /// Registry for managing agent runners.
 /// This is a stable extension point that allows adding new runners without modifying core logic.
 /// </summary>
-public sealed class RunnerRegistry
+public class RunnerRegistry
 {
     private readonly Dictionary<string, IAgentRunner> _runners = new();
     private readonly ILogger<RunnerRegistry>? _logger;
@@ -88,7 +88,7 @@ public sealed class RunnerRegistry
     /// Honors IsAvailable: if the mode-mapped runner is registered but not currently
     /// available (e.g. OpenCode server down), fall back to the default runner.
     /// </summary>
-    public IAgentRunner ResolveRunner(ExecutionMode executionMode)
+    public virtual IAgentRunner ResolveRunner(ExecutionMode executionMode)
     {
         return executionMode switch
         {

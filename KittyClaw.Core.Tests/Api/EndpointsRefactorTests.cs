@@ -108,9 +108,28 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
         "PUT /api/projects/{slug}/dashboard/tiles/{tileSlug}/sidecar",
         "GET /api/projects/{slug}/dashboard/tiles/{tileSlug}/script",
         "POST /api/projects/{slug}/dashboard/tiles/{tileSlug}/refresh",
-        // Dev utilities
-        "POST /api/dev/update-check/reset",
-        "POST /api/dev/update-check/simulate",
+        // Dev utilities — excluded from OpenAPI spec via ExcludeFromDescription()
+        // "POST /api/dev/update-check/reset",
+        // "POST /api/dev/update-check/simulate",
+        // Settings (pre-existing baseline gap)
+        "GET /api/settings",
+        "POST /api/settings",
+        // Board events (pre-existing baseline gap)
+        "GET /api/projects/{slug}/events",
+        // Runs — extended routes (plan / run / opencode)
+        "GET /api/projects/{slug}/tickets/{id}/runs/latest",
+        "GET /api/projects/{slug}/tickets/{id}/runs",
+        "POST /api/projects/{slug}/tickets/{id}/run",
+        "POST /api/projects/{slug}/tickets/{id}/plan/approve",
+        "POST /api/projects/{slug}/tickets/{id}/plan/reject",
+        "POST /api/projects/{slug}/tickets/{id}/plan/reset",
+        "GET /api/projects/{slug}/opencode/health",
+        // Failures logbook (this PR)
+        "GET /api/projects/{slug}/failures",
+        "GET /api/projects/{slug}/tickets/{id}/failures",
+        "GET /api/projects/{slug}/tickets/{id}/failures/latest",
+        "POST /api/projects/{slug}/failures/{failureId}/resolve",
+        "DELETE /api/projects/{slug}/tickets/{id}/failures",
     };
 
     [Fact]
@@ -192,6 +211,25 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
         ["PUT /api/projects/{slug}/dashboard/tiles/{tileSlug}/sidecar"] = "Dashboard",
         ["GET /api/projects/{slug}/dashboard/tiles/{tileSlug}/script"] = "Dashboard",
         ["POST /api/projects/{slug}/dashboard/tiles/{tileSlug}/refresh"] = "Dashboard",
+        // Settings
+        ["GET /api/settings"] = "Settings",
+        ["POST /api/settings"] = "Settings",
+        // Board events
+        ["GET /api/projects/{slug}/events"] = "Board",
+        // Runs — extended
+        ["GET /api/projects/{slug}/tickets/{id}/runs/latest"] = "Runs",
+        ["GET /api/projects/{slug}/tickets/{id}/runs"] = "Runs",
+        ["POST /api/projects/{slug}/tickets/{id}/run"] = "Runs",
+        ["POST /api/projects/{slug}/tickets/{id}/plan/approve"] = "Plan",
+        ["POST /api/projects/{slug}/tickets/{id}/plan/reject"] = "Plan",
+        ["POST /api/projects/{slug}/tickets/{id}/plan/reset"] = "Plan",
+        ["GET /api/projects/{slug}/opencode/health"] = "OpenCode",
+        // Failures
+        ["GET /api/projects/{slug}/failures"] = "Failures",
+        ["GET /api/projects/{slug}/tickets/{id}/failures"] = "Failures",
+        ["GET /api/projects/{slug}/tickets/{id}/failures/latest"] = "Failures",
+        ["POST /api/projects/{slug}/failures/{failureId}/resolve"] = "Failures",
+        ["DELETE /api/projects/{slug}/tickets/{id}/failures"] = "Failures",
     };
 
     [Fact]
@@ -275,6 +313,7 @@ public sealed class EndpointsRefactorTests : IClassFixture<EndpointsRefactorTest
             "Endpoints.Skills.cs",
             "Endpoints.Automations.cs",
             "Endpoints.Runs.cs",
+            "Endpoints.Failures.cs",
             "Endpoints.Chat.cs",
             "Endpoints.Images.cs",
             "Endpoints.Dashboard.cs",
