@@ -18,24 +18,24 @@
 ## Visual Preview
 
 <p align="center">
-  <img src="docs/assets/hero-banner.svg" alt="Beaver Board Kanban Hero" width="800" />
+  <img src="docs/assets/generated/hero-banner.png" alt="Beaver Board Kanban Hero" width="800" />
   <br>
   <sub>↑ Beaver Board Kanban: Run your AI team from one board</sub>
 </p>
 
 <p align="center">
-  <img src="docs/assets/architecture-flow.svg" alt="OpenCode Integration Flow" width="800" />
+  <img src="docs/assets/generated/architecture-flow.png" alt="OpenCode Integration Flow" width="800" />
   <br>
   <sub>↑ Task cards connect to AI agents, which execute through OpenCode</sub>
 </p>
 
 <p align="center">
-  <img src="docs/assets/ui-closeup.svg" alt="Beaver Board Kanban UI" width="800" />
+  <img src="docs/assets/generated/ui-closeup.png" alt="Beaver Board Kanban UI" width="800" />
   <br>
   <sub>↑ Everything in context: tasks, code changes, and AI conversations</sub>
 </p>
 
-> **Note**: For best visual quality, replace these SVG files with PNG screenshots from the [readme-assets-generator-3.html](docs/assets/readme-assets-generator-3.html) template. See the [branding guide](docs/branding-guide.md) for details.
+> **Note**: PNG assets are generated from the [readme-assets-generator-3.html](docs/assets/readme-assets-generator-3.html) template. See the [branding guide](docs/branding-guide.md) for details.
 
 ---
 
