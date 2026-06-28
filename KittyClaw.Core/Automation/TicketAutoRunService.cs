@@ -48,6 +48,9 @@ public sealed class TicketAutoRunService : IHostedService, IDisposable
     private readonly Channel<(string ProjectSlug, int TicketId, string From, string To)> _queue =
         Channel.CreateUnbounded<(string, int, string, string)>();
 
+    private readonly ConcurrentDictionary<string, DateTime> _recentDuplicates = new();
+    private const int DuplicateSuppressionSeconds = 30;
+
     private Task? _loopTask;
     private CancellationTokenSource? _cts;
 
@@ -122,9 +125,21 @@ public sealed class TicketAutoRunService : IHostedService, IDisposable
         _logger?.LogInformation("TicketAutoRunService: processing transition #{Id} {From} → {To}",
             ticketId, from, to);
 
-        // 1. No-duplicate check
+        // 1. No-duplicate check with time-based suppression
         if (_runRegistry.ActiveForTicket(projectSlug, ticketId).Any())
         {
+            var dedupKey = $"{projectSlug}:{ticketId}";
+            var now = DateTime.UtcNow;
+
+            // Only log failure if we haven't logged one recently
+            if (_recentDuplicates.TryGetValue(dedupKey, out var lastDuplicate)
+                && (now - lastDuplicate).TotalSeconds < DuplicateSuppressionSeconds)
+            {
+                _logger?.LogDebug("TicketAutoRunService: ticket #{Id} duplicate suppressed", ticketId);
+                return;
+            }
+
+            _recentDuplicates[dedupKey] = now;
             _logger?.LogInformation("TicketAutoRunService: ticket #{Id} already has an active run — skipping", ticketId);
             _failures.Record(new FailureLogEntry
             {
@@ -136,6 +151,9 @@ public sealed class TicketAutoRunService : IHostedService, IDisposable
             });
             return;
         }
+
+        // Clean up old dedup entries
+        CleanupDuplicateSuppression();
 
         // 2. Load ticket
         var ticket = await _tickets.GetTicketAsync(projectSlug, ticketId);
@@ -484,6 +502,17 @@ public sealed class TicketAutoRunService : IHostedService, IDisposable
         && Enum.TryParse<ExecutionMode>(override_, ignoreCase: true, out var m)
             ? m
             : ExecutionMode.LegacyClaude;
+
+    private void CleanupDuplicateSuppression()
+    {
+        var cutoff = DateTime.UtcNow.AddSeconds(-DuplicateSuppressionSeconds * 2);
+        var keysToRemove = _recentDuplicates
+            .Where(kvp => kvp.Value < cutoff)
+            .Select(kvp => kvp.Key)
+            .ToList();
+        foreach (var key in keysToRemove)
+            _recentDuplicates.TryRemove(key, out _);
+    }
 
     public void Dispose() => _cts?.Dispose();
 }
