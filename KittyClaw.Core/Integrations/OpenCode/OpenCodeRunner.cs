@@ -231,7 +231,7 @@ public sealed class OpenCodeRunner : IAgentRunner
         Directory.CreateDirectory(workingDir);
         
         // Build CLI arguments using template
-        var arguments = BuildCliArguments(request, executionMetadata);
+        var arguments = BuildCliArguments(request, executionMetadata, out var promptFile);
         var commandDisplay = $"{cliCommand} {string.Join(" ", arguments.Select(a => $"\"{a}\""))}";
         agentRun.CommandDisplay = commandDisplay;
         
@@ -312,6 +312,7 @@ public sealed class OpenCodeRunner : IAgentRunner
             await steerTask;
             _processes.TryRemove(agentRun.RunId, out _);
             _runRegistry.Complete(agentRun.RunId, AgentRunStatus.Stopped, null);
+            CleanupPromptFile(promptFile);
             
             return new AgentRunResult
             {
@@ -328,6 +329,7 @@ public sealed class OpenCodeRunner : IAgentRunner
         }
         
         await steerTask;
+        CleanupPromptFile(promptFile);
         
         var finishedAt = DateTimeOffset.UtcNow;
         var exitCode = process.ExitCode;
@@ -408,8 +410,9 @@ public sealed class OpenCodeRunner : IAgentRunner
         return _config.CliCommand ?? "opencode";
     }
     
-    private List<string> BuildCliArguments(AgentRunRequest request, ExecutionMetadata executionMetadata)
+    private List<string> BuildCliArguments(AgentRunRequest request, ExecutionMetadata executionMetadata, out string? promptFile)
     {
+        promptFile = null;
         var arguments = new List<string>();
         
         // Use command template if configured
@@ -449,12 +452,17 @@ public sealed class OpenCodeRunner : IAgentRunner
             arguments.Add(request.WorktreePath);
         }
         
-        // Add prompt from file or directly
+        // Write prompt to a temp file and pass --prompt-file.
+        // This avoids shell-escaping issues with long prompts and special characters.
         if (!string.IsNullOrEmpty(request.Prompt))
         {
-            // For now, pass prompt directly (OpenCode CLI may need a file)
-            arguments.Add("--prompt");
-            arguments.Add(request.Prompt);
+            var workingDir = request.WorktreePath ?? request.WorkspacePath;
+            var tmpDir = Path.Combine(workingDir, ".agents", "tmp");
+            Directory.CreateDirectory(tmpDir);
+            promptFile = Path.Combine(tmpDir, $"prompt-{Guid.NewGuid():N}.txt");
+            File.WriteAllText(promptFile, request.Prompt);
+            arguments.Add("--prompt-file");
+            arguments.Add(promptFile);
         }
         
         return arguments;
@@ -552,6 +560,12 @@ public sealed class OpenCodeRunner : IAgentRunner
         
         // Default to Running if we don't know
         return AgentRunStatus.Running;
+    }
+    
+    private static void CleanupPromptFile(string? promptFile)
+    {
+        if (string.IsNullOrEmpty(promptFile)) return;
+        try { File.Delete(promptFile); } catch { }
     }
 }
 

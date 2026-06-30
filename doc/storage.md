@@ -1,11 +1,11 @@
 # Storage
 
 ## Purpose
-Persists all KittyClaw data locally. Splits app-wide state from per-project data, and keeps agent runtime state inside the workspace so it travels with the repo.
+Persists all Beaver Board data locally. Splits app-wide state from per-project data, and keeps agent runtime state inside the workspace so it travels with the repo.
 
 ## Layout
 
-Under `%APPDATA%/KittyClaw/`:
+Under `%APPDATA%/BeaverBoard/` (configurable via `BEAVERBOARD_DATA_DIR`, falls back to `KITTYCLAW_DATA_DIR`):
 - `registry.db` — SQLite project registry (slug, name, workspace path, …).
 - `projects/{slug}.db` — per-project SQLite DB (tickets, comments, labels, columns, members).
 - `uploads/` — uploaded images referenced by descriptions and comments.

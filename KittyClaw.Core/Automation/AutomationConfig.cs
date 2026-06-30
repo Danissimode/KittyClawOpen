@@ -213,6 +213,12 @@ public sealed class TicketAgeConditionSpec : ConditionSpec
 public abstract class ActionSpec
 {
     public abstract string UiTypeKey { get; }
+    /// <summary>
+    /// If false, this action must be explicitly enabled in project settings before
+    /// the automation engine will execute it. Used to gate dangerous actions like
+    /// shell execution by default.
+    /// </summary>
+    public virtual bool EnabledByDefault => true;
 }
 
 public sealed class RunAgentActionSpec : ActionSpec
@@ -322,6 +328,7 @@ public sealed class CreateTicketActionSpec : ActionSpec
 public sealed class ExecutePowerShellActionSpec : ActionSpec
 {
     public override string UiTypeKey => "executePowerShell";
+    public override bool EnabledByDefault => false;
     public string Script { get; set; } = "";
     public string? ScriptFile { get; set; }
     public List<string> Arguments { get; set; } = new();

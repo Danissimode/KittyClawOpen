@@ -4426,6 +4426,44 @@ details[open] .tool-call-summary::before { transform: rotate(90deg); }
 
 .tile-config-accept:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* Security notice — local-only tool warning */
+.security-banner {
+    position: fixed;
+    left: 50%;
+    top: 0;
+    transform: translateX(-50%);
+    z-index: 9000;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px 8px 12px;
+    background: #451a03; /* warm dark orange bg */
+    color: #fed7aa;
+    border-bottom: 1px solid #c2410c;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    font-size: 13px;
+    max-width: 680px;
+}
+.security-banner-icon { font-size: 16px; line-height: 1; }
+.security-banner-text { line-height: 1.35; }
+.security-banner-text code {
+    background: rgba(194, 65, 12, 0.3);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+.security-banner-dismiss {
+    margin-left: 6px;
+    background: transparent;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: 14px;
+    opacity: 0.7;
+}
+.security-banner-dismiss:hover { opacity: 1; }
+
 /* Release-update banner (ticket #175) */
 .update-banner {
     position: fixed;

@@ -62,6 +62,7 @@ public sealed class SettingsData
     public bool NotificationsEnabled { get; set; } = true;
     public string AwsProfile { get; set; } = "";
     public string AwsRegion { get; set; } = "us-east-1";
+    public bool SecurityBannerDismissed { get; set; } = false;
     
     // Runner preferences
     public string PreferredRunner { get; set; } = "auto"; // "auto", "opencode", "claude"

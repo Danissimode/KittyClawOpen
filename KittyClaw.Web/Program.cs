@@ -11,9 +11,9 @@ using KittyClaw.Web.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Default to HTTP-only on :5230 when no URL config is provided. KittyClaw is a local-only
+// Default to HTTP-only on :5230 when no URL config is provided. Beaver Board is a local-only
 // app with no HTTPS cert, so the framework default (HTTP + HTTPS dual binding on :5000/:5001)
-// is wrong here. 5230 is the historical KittyClaw port — kept for backward compatibility
+// is wrong here. 5230 is the historical port — kept for backward compatibility
 // with existing skills, bookmarks, and external integrations that point at it.
 //
 // Only kick in when nothing else (ASPNETCORE_URLS, launchSettings.applicationUrl, --urls,
@@ -30,16 +30,18 @@ if (string.IsNullOrEmpty(builder.Configuration["urls"]))
     Environment.SetEnvironmentVariable("ASPNETCORE_URLS", fallbackUrl);
 }
 
-// KITTYCLAW_DATA_DIR overrides the default %APPDATA%/KittyClaw location.
-// Used by isolated test instances (KittyClaw.QaRunner) and anyone running
-// multiple parallel KittyClaw processes that must not share registry/projects.
+// BEAVERBOARD_DATA_DIR: primary data directory override.
+// Falls back to KITTYCLAW_DATA_DIR (backward compat with existing setups).
+// Defaults to %APPDATA%/BeaverBoard/ — not KittyClaw, for clean rebrand.
+// Legacy TodoApp path is migrated to the active data dir on first run.
 var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-var dataDir = Environment.GetEnvironmentVariable("KITTYCLAW_DATA_DIR")
-    ?? Path.Combine(appData, "KittyClaw");
-var legacyDataDir = Path.Combine(appData, "TodoApp");
-if (!Directory.Exists(dataDir) && Directory.Exists(legacyDataDir))
+var dataDir = Environment.GetEnvironmentVariable("BEAVERBOARD_DATA_DIR")
+    ?? Environment.GetEnvironmentVariable("KITTYCLAW_DATA_DIR")
+    ?? Path.Combine(appData, "BeaverBoard");
+var legacyTodoAppDir = Path.Combine(appData, "TodoApp");
+if (!Directory.Exists(dataDir) && Directory.Exists(legacyTodoAppDir))
 {
-    Directory.Move(legacyDataDir, dataDir);
+    Directory.Move(legacyTodoAppDir, dataDir);
 }
 var appSettings = new KittyClaw.Core.Services.AppSettingsService(dataDir);
 builder.Services.AddSingleton(appSettings);
@@ -77,14 +79,18 @@ builder.Services.AddSingleton<AgentRuntimeConfigLoader>(sp => new AgentRuntimeCo
 // Runtimes (all implement IAgentRuntime)
 builder.Services.AddSingleton<ProcessRunner>();
 builder.Services.AddSingleton<IAgentRuntime, ClaudeCodeRuntime>();
-builder.Services.AddSingleton<IAgentRuntime, MimoCodeRuntime>();
-builder.Services.AddSingleton<IAgentRuntime, ScriptRuntime>();
 builder.Services.AddSingleton<IAgentRuntime, OpenCodeRuntime>();
-builder.Services.AddSingleton<IAgentRuntime, CodexRuntime>();
-builder.Services.AddSingleton<IAgentRuntime, GitHubCopilotRuntime>();
-builder.Services.AddSingleton<IAgentRuntime, AntigravityRuntime>();
-builder.Services.AddSingleton<IAgentRuntime, VibeRuntime>();
-builder.Services.AddSingleton<IAgentRuntime, KimiCodeRuntime>();
+
+// Stubs below — commented out until real implementation exists.
+// These create a false impression of broad runtime support.
+// Uncomment and implement when ready to add a new runner.
+// builder.Services.AddSingleton<IAgentRuntime, MimoCodeRuntime>();
+// builder.Services.AddSingleton<IAgentRuntime, ScriptRuntime>();
+// builder.Services.AddSingleton<IAgentRuntime, CodexRuntime>();
+// builder.Services.AddSingleton<IAgentRuntime, GitHubCopilotRuntime>();
+// builder.Services.AddSingleton<IAgentRuntime, AntigravityRuntime>();
+// builder.Services.AddSingleton<IAgentRuntime, VibeRuntime>();
+// builder.Services.AddSingleton<IAgentRuntime, KimiCodeRuntime>();
 
 builder.Services.AddSingleton<AgentRuntimeRouter>();
 builder.Services.AddSingleton<IAgentPromptBuilder, PromptBuilder>();
@@ -167,6 +173,20 @@ if (OperatingSystem.IsWindows())
 
 builder.Services.AddCors(options =>
 {
+    // LocalOnly: only localhost and 127.0.0.1 on the app port are allowed.
+    // This is a local-only tool — do not expose this port publicly.
+    options.AddPolicy("LocalOnly", policy =>
+    {
+        policy.WithOrigins(
+                "http://localhost:5230",
+                "http://127.0.0.1:5230"
+            )
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+    
+    // AllowAll is kept only for health/doctor endpoints that need zero-CORS.
+    // All other endpoints must use "LocalOnly".
     options.AddPolicy("AllowAll", policy =>
     {
         policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
@@ -201,7 +221,7 @@ app.UseStaticFiles(new Microsoft.AspNetCore.Builder.StaticFileOptions
 
 app.UseAntiforgery();
 
-app.UseCors("AllowAll");
+app.UseCors("LocalOnly");
 app.MapOpenApi();
 app.MapTodoApi();
 
@@ -228,6 +248,56 @@ app.MapGet("/api/docs", async (HttpContext ctx) =>
     var markdown = OpenApiMarkdownGenerator.Generate(doc);
     return Results.Text(markdown, "text/markdown; charset=utf-8");
 }).ExcludeFromDescription();
+
+// Health endpoint — no CORS required (GET only, no sensitive data)
+app.MapGet("/api/health", (HttpContext ctx) =>
+{
+    var checks = new List<object>();
+    bool allOk = true;
+    
+    // .NET runtime
+    checks.Add(new { name = "dotnet", status = "ok", detail = ".NET " + Environment.Version });
+    
+    // Data directory
+    try
+    {
+        var ddOk = Directory.Exists(dataDir) || Directory.CreateDirectory(dataDir) != null;
+        checks.Add(new { name = "dataDir", status = ddOk ? "ok" : "error", detail = dataDir });
+        if (!ddOk) allOk = false;
+    }
+    catch (Exception ex)
+    {
+        checks.Add(new { name = "dataDir", status = "error", detail = ex.Message });
+        allOk = false;
+    }
+    
+    // Uploads writable
+    try
+    {
+        var testFile = Path.Combine(uploadsDir, ".health-check");
+        File.WriteAllText(testFile, "ok");
+        File.Delete(testFile);
+        checks.Add(new { name = "uploads", status = "ok", detail = uploadsDir });
+    }
+    catch (Exception ex)
+    {
+        checks.Add(new { name = "uploads", status = "error", detail = ex.Message });
+        allOk = false;
+    }
+    
+    // CORS mode (informational)
+    checks.Add(new { name = "cors", status = "info", detail = "LocalOnly (localhost + 127.0.0.1 only)" });
+    
+    // Port
+    checks.Add(new { name = "port", status = "info", detail = ctx.Request.Host.Port?.ToString() ?? "unknown" });
+    
+    return Results.Ok(new
+    {
+        status = allOk ? "healthy" : "degraded",
+        timestamp = DateTime.UtcNow,
+        checks
+    });
+}).WithTags("Health").ExcludeFromDescription();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()

@@ -1,0 +1,35 @@
+@rendermode InteractiveServer
+@inject SettingsService Settings
+
+@if (!_dismissed)
+{
+    <div class="security-banner" role="alert">
+        <span class="security-banner-icon">🔒</span>
+        <span class="security-banner-text">
+            <strong>Local tool only.</strong>
+            Do not expose this port publicly.
+            Use <code>BEAVERBOARD_DATA_DIR</code> to store data in a custom location.
+        </span>
+        <button type="button" class="security-banner-dismiss" @onclick="OnDismiss" aria-label="Dismiss security notice">
+            ✕
+        </button>
+    </div>
+}
+
+@code {
+    private bool _dismissed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var settings = await Settings.LoadAsync();
+        _dismissed = settings.SecurityBannerDismissed;
+    }
+
+    private async Task OnDismiss()
+    {
+        _dismissed = true;
+        var settings = await Settings.LoadAsync();
+        settings.SecurityBannerDismissed = true;
+        await Settings.SaveAsync(settings);
+    }
+}

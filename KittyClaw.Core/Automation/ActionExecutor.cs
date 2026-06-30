@@ -290,6 +290,13 @@ internal sealed partial class ActionExecutor
                         break;
                     case ExecutePowerShellActionSpec ps:
                     {
+                        if (!ps.EnabledByDefault)
+                        {
+                            _logger.LogWarning(
+                                "[Security] executePowerShell action is disabled by default. " +
+                                "Set 'EnabledByDefault: true' in the automation to enable shell execution.");
+                            break;
+                        }
                         var abort = await ExecutePowerShellAsync(ps, rt.Workspace!, rt.Slug, firing, ct);
                         if (abort) return state.LastRun;
                         break;
@@ -714,7 +721,18 @@ internal sealed partial class ActionExecutor
                     case AddCommentActionSpec ac when firing.TicketId is not null: await ExecuteAddCommentActionAsync(rt, firing, ac); break;
                     case SetLabelsActionSpec sl when firing.TicketId is not null: await ExecuteSetLabelsActionAsync(rt, firing, sl); break;
                     case AssignTicketActionSpec at when firing.TicketId is not null: await ExecuteAssignTicketActionAsync(rt, firing, at); break;
-                    case ExecutePowerShellActionSpec ps: await ExecutePowerShellAsync(ps, rt.Workspace!, rt.Slug, firing, ct); break;
+                    case ExecutePowerShellActionSpec ps:
+                    {
+                        if (!ps.EnabledByDefault)
+                        {
+                            _logger.LogWarning(
+                                "[Security] executePowerShell post-action is disabled by default. " +
+                                "Set 'EnabledByDefault: true' in the automation to enable shell execution.");
+                            break;
+                        }
+                        await ExecutePowerShellAsync(ps, rt.Workspace!, rt.Slug, firing, ct);
+                        break;
+                    }
                     case RunAgentActionSpec ra:
                     {
                         var (skip, runTask, agentName) = await StartAgentRunAsync(rt, firing, ra, ct);

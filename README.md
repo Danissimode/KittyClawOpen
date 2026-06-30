@@ -119,13 +119,15 @@ The workspace folder itself is never deleted by Beaver Board, even when you dele
 
 ### Data Storage
 
-All Beaver Board data is stored locally in `%APPDATA%/KittyClaw/`:
+All Beaver Board data is stored locally in `%APPDATA%/BeaverBoard/` (configurable via `BEAVERBOARD_DATA_DIR`, falls back to `KITTYCLAW_DATA_DIR` for existing setups):
 
 - `registry.db` — project registry
 - `projects/{slug}.db` — per-project database (tickets, comments, labels, columns, members)
 - `uploads/` — uploaded images
 - `runs/{runId}.json` — agent run snapshots (events, status, exit code)
 - `settings.json` — language + onboarding flag
+
+> **Migration:** If you were using `%APPDATA%/KittyClaw/`, Beaver Board will automatically pick up your existing data via the `KITTYCLAW_DATA_DIR` fallback. A clean install uses `%APPDATA%/BeaverBoard/` by default.
 
 Per-project agent state lives **in the workspace**: `<workspace>/.agents/{agent}/memory/` (scored `MEMORY.md` index + per-topic lesson files), `<workspace>/.agents/channel/` (session state), etc.
 
