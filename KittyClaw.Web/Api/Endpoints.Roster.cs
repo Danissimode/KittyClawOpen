@@ -138,11 +138,87 @@ public static class EndpointsRoster
         })
         .WithName("ResolveExecution")
         .WithDescription("Preview execution resolution for a ticket");
+
+        // ── Ticket slot assignment ──────────────────────────────────────
+        group.MapPost("/tickets/{ticketId}/assign", (
+            int ticketId,
+            [FromBody] AssignSlotRequest request,
+            RosterStore store,
+            Core.Services.TodoDbContext db) =>
+        {
+            var ticket = db.Tickets.FirstOrDefault(t => t.Id == ticketId);
+            if (ticket is null) return Results.NotFound($"Ticket {ticketId} not found");
+
+            // Validate slot exists
+            if (!string.IsNullOrEmpty(request.SlotId) && !store.Slots.ContainsKey(request.SlotId))
+            {
+                return Results.BadRequest($"Slot '{request.SlotId}' not found");
+            }
+
+            ticket.AssignedSlotId = request.SlotId;
+            ticket.OverrideModelProfileId = request.OverrideModelProfileId;
+            ticket.LockExecutor = request.LockExecutor;
+            ticket.UpdatedAt = DateTime.UtcNow;
+            db.SaveChanges();
+
+            return Results.Ok(new
+            {
+                ticketId,
+                assignedSlotId = ticket.AssignedSlotId,
+                overrideModelProfileId = ticket.OverrideModelProfileId,
+                lockExecutor = ticket.LockExecutor
+            });
+        })
+        .WithName("AssignSlotToTicket")
+        .WithDescription("Assign an execution slot to a ticket");
+
+        group.MapGet("/tickets/{ticketId}/assignment", (
+            int ticketId,
+            RosterStore store,
+            Core.Services.TodoDbContext db) =>
+        {
+            var ticket = db.Tickets.FirstOrDefault(t => t.Id == ticketId);
+            if (ticket is null) return Results.NotFound($"Ticket {ticketId} not found");
+
+            return Results.Ok(new
+            {
+                ticketId,
+                assignedSlotId = ticket.AssignedSlotId,
+                overrideModelProfileId = ticket.OverrideModelProfileId,
+                lockExecutor = ticket.LockExecutor
+            });
+        })
+        .WithName("GetTicketAssignment")
+        .WithDescription("Get execution slot assignment for a ticket");
+
+        group.MapDelete("/tickets/{ticketId}/assignment", (
+            int ticketId,
+            Core.Services.TodoDbContext db) =>
+        {
+            var ticket = db.Tickets.FirstOrDefault(t => t.Id == ticketId);
+            if (ticket is null) return Results.NotFound($"Ticket {ticketId} not found");
+
+            ticket.AssignedSlotId = null;
+            ticket.OverrideModelProfileId = null;
+            ticket.LockExecutor = false;
+            ticket.UpdatedAt = DateTime.UtcNow;
+            db.SaveChanges();
+
+            return Results.Ok(new { ticketId, cleared = true });
+        })
+        .WithName("ClearTicketAssignment")
+        .WithDescription("Clear execution slot assignment from a ticket");
     }
 
     public record ResolveRequest(
         string? SlotId,
         string? OverrideModelProfileId,
         bool? LockExecutor
+    );
+
+    public record AssignSlotRequest(
+        string? SlotId,
+        string? OverrideModelProfileId,
+        bool LockExecutor = false
     );
 }
