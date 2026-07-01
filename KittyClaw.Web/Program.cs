@@ -58,6 +58,7 @@ builder.Services.AddSingleton<TeamRoleStore>(sp =>
     new TeamRoleStore(dataDir, sp.GetRequiredService<ILogger<TeamRoleStore>>()));
 builder.Services.AddSingleton<RoleInboxStore>(sp =>
     new RoleInboxStore(dataDir, sp.GetRequiredService<ILogger<RoleInboxStore>>()));
+builder.Services.AddSingleton<MessageRouter>();
 builder.Services.AddScoped<KittyClaw.Web.Services.BoardFilterState>();
 builder.Services.AddScoped<KittyClaw.Web.Services.BoardSortState>();
 builder.Services.AddSingleton<SettingsService>();

@@ -402,4 +402,81 @@ public sealed class RoleInboxStore
         EvidenceJson = r.IsDBNull(r.GetOrdinal("EvidenceJson")) ? null : r.GetString(r.GetOrdinal("EvidenceJson")),
         ExitStatus = r.IsDBNull(r.GetOrdinal("ExitStatus")) ? null : r.GetString(r.GetOrdinal("ExitStatus"))
     };
+
+    // ── Conversation Policy ────────────────────────────────────────────
+
+    public async Task<ConversationPolicy?> GetPolicyAsync(string projectSlug, CancellationToken ct = default)
+    {
+        var dbPath = DbPath(projectSlug);
+        await EnsurePolicyTableAsync(dbPath);
+
+        await using var conn = new SqliteConnection($"Data Source={dbPath}");
+        await conn.OpenAsync(ct);
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT * FROM ConversationPolicies WHERE ProjectSlug = $project LIMIT 1";
+        cmd.Parameters.AddWithValue("$project", projectSlug);
+
+        await using var reader = await cmd.ExecuteReaderAsync(ct);
+        return await reader.ReadAsync(ct) ? ReadPolicy(reader) : null;
+    }
+
+    public async Task<ConversationPolicy> UpsertPolicyAsync(ConversationPolicy policy, CancellationToken ct = default)
+    {
+        var dbPath = DbPath(policy.ProjectSlug);
+        await EnsurePolicyTableAsync(dbPath);
+
+        await using var conn = new SqliteConnection($"Data Source={dbPath}");
+        await conn.OpenAsync(ct);
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = """
+            INSERT OR REPLACE INTO ConversationPolicies 
+            (Id, ProjectSlug, ReplyPolicy, AllowDirectAgentMentions, AutoSummarizeRoleResponses, 
+             ShowCriticalEventsInMain, AlwaysVisibleRolesJson, UpdatedAt)
+            VALUES ($id, $project, $replyPolicy, $allowDirect, $autoSummarize, 
+                    $showCritical, $alwaysVisible, $updatedAt)
+        """;
+        cmd.Parameters.AddWithValue("$id", policy.Id);
+        cmd.Parameters.AddWithValue("$project", policy.ProjectSlug);
+        cmd.Parameters.AddWithValue("$replyPolicy", policy.ReplyPolicy.ToString());
+        cmd.Parameters.AddWithValue("$allowDirect", policy.AllowDirectAgentMentions ? 1 : 0);
+        cmd.Parameters.AddWithValue("$autoSummarize", policy.AutoSummarizeRoleResponses ? 1 : 0);
+        cmd.Parameters.AddWithValue("$showCritical", policy.ShowCriticalEventsInMain ? 1 : 0);
+        cmd.Parameters.AddWithValue("$alwaysVisible", (object?)policy.AlwaysVisibleRolesJson ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$updatedAt", policy.UpdatedAt.ToString("o"));
+        await cmd.ExecuteNonQueryAsync(ct);
+
+        return policy;
+    }
+
+    private async Task EnsurePolicyTableAsync(string dbPath)
+    {
+        await using var conn = new SqliteConnection($"Data Source={dbPath}");
+        await conn.OpenAsync();
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = """
+            CREATE TABLE IF NOT EXISTS ConversationPolicies (
+                Id TEXT NOT NULL PRIMARY KEY,
+                ProjectSlug TEXT NOT NULL UNIQUE,
+                ReplyPolicy TEXT NOT NULL DEFAULT 'mediated_roles',
+                AllowDirectAgentMentions INTEGER NOT NULL DEFAULT 0,
+                AutoSummarizeRoleResponses INTEGER NOT NULL DEFAULT 1,
+                ShowCriticalEventsInMain INTEGER NOT NULL DEFAULT 1,
+                AlwaysVisibleRolesJson TEXT,
+                UpdatedAt TEXT NOT NULL
+            );
+        """;
+        await cmd.ExecuteNonQueryAsync();
+    }
+
+    private static ConversationPolicy ReadPolicy(SqliteDataReader r) => new()
+    {
+        Id = r.GetString(r.GetOrdinal("Id")),
+        ProjectSlug = r.GetString(r.GetOrdinal("ProjectSlug")),
+        ReplyPolicy = Enum.Parse<ReplyPolicy>(r.GetString(r.GetOrdinal("ReplyPolicy")), true),
+        AllowDirectAgentMentions = r.GetInt32(r.GetOrdinal("AllowDirectAgentMentions")) == 1,
+        AutoSummarizeRoleResponses = r.GetInt32(r.GetOrdinal("AutoSummarizeRoleResponses")) == 1,
+        ShowCriticalEventsInMain = r.GetInt32(r.GetOrdinal("ShowCriticalEventsInMain")) == 1,
+        AlwaysVisibleRolesJson = r.IsDBNull(r.GetOrdinal("AlwaysVisibleRolesJson")) ? null : r.GetString(r.GetOrdinal("AlwaysVisibleRolesJson")),
+        UpdatedAt = DateTimeOffset.Parse(r.GetString(r.GetOrdinal("UpdatedAt")))
+    };
 }

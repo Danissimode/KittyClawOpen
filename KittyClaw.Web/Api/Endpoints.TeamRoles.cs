@@ -216,6 +216,60 @@ public static class EndpointsTeamRoles
         })
         .WithName("UpdateSessionState")
         .WithDescription("Update session state");
+
+        // ── Conversation Policy ─────────────────────────────────────────
+        group.MapGet("/projects/{slug}/conversation-policy", async (string slug, RoleInboxStore store) =>
+        {
+            var policy = await store.GetPolicyAsync(slug);
+            return policy is not null ? Results.Ok(policy) : Results.Ok(new ConversationPolicy { ProjectSlug = slug });
+        })
+        .WithName("GetConversationPolicy")
+        .WithDescription("Get conversation policy for project");
+
+        group.MapPut("/projects/{slug}/conversation-policy", async (
+            string slug,
+            [FromBody] ConversationPolicy policy,
+            RoleInboxStore store) =>
+        {
+            policy.ProjectSlug = slug;
+            var result = await store.UpsertPolicyAsync(policy);
+            return Results.Ok(result);
+        })
+        .WithName("UpdateConversationPolicy")
+        .WithDescription("Update conversation policy");
+
+        // ── Message Routing ─────────────────────────────────────────────
+        group.MapPost("/projects/{slug}/messages/route", async (
+            string slug,
+            [FromBody] RouteMessageRequest request,
+            MessageRouter router) =>
+        {
+            var routed = await router.RouteUserMessageAsync(slug, request.Text, request.UserId);
+            return Results.Ok(routed);
+        })
+        .WithName("RouteMessage")
+        .WithDescription("Route a user message through the communication system");
+
+        group.MapGet("/projects/{slug}/activity", async (
+            string slug,
+            string? visibility,
+            int limit,
+            RoleInboxStore store) =>
+        {
+            // TODO: Implement activity feed query
+            return Results.Ok(new List<object>());
+        })
+        .WithName("GetActivity")
+        .WithDescription("Get team activity feed");
+
+        group.MapGet("/projects/{slug}/sessions/{sessionId}/messages", async (
+            string slug, string sessionId, RoleInboxStore store) =>
+        {
+            // TODO: Implement session messages query
+            return Results.Ok(new List<object>());
+        })
+        .WithName("GetSessionMessages")
+        .WithDescription("Get messages for a specific session");
     }
 
     public record SendCommandRequest(string Text, string? UserId);
@@ -232,4 +286,5 @@ public static class EndpointsTeamRoles
         string? ExecutionProfileId
     );
     public record UpdateStateRequest(string State);
+    public record RouteMessageRequest(string Text, string? UserId);
 }
