@@ -6516,3 +6516,186 @@ details[open] .tool-call-summary::before { transform: rotate(90deg); }
         transition-duration: 0.01ms !important;
     }
 }
+
+/* ==========================================================================
+   Roster Panel (Control Plane UI)
+   ========================================================================== */
+.roster-panel {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.roster-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 120px;
+}
+
+.roster-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.roster-preset {
+    font-size: 0.85rem;
+    color: var(--accent);
+    font-weight: 500;
+}
+
+.roster-slots {
+    display: flex;
+    gap: 0.75rem;
+    flex: 1;
+    overflow-x: auto;
+    padding: 0.25rem 0;
+}
+
+.roster-slot {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.roster-slot.available {
+    border-color: var(--accent-success);
+}
+
+.roster-slot.busy {
+    border-color: var(--accent-info);
+}
+
+.roster-slot.paused {
+    border-color: var(--text-muted);
+    opacity: 0.6;
+}
+
+.roster-slot.error {
+    border-color: var(--s-blocked);
+}
+
+.slot-label {
+    font-weight: 500;
+    color: var(--text);
+}
+
+.slot-model {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.slot-status {
+    font-size: 0.7rem;
+}
+
+.slot-status.available { color: var(--accent-success); }
+.slot-status.busy { color: var(--accent-info); }
+.slot-status.paused { color: var(--text-muted); }
+.slot-status.error { color: var(--s-blocked); }
+
+.roster-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Preset Switcher Overlay */
+.preset-switcher-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.preset-switcher {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 320px;
+    max-height: 400px;
+    overflow: hidden;
+}
+
+.preset-switcher-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    font-weight: 500;
+}
+
+.btn-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.btn-close:hover {
+    color: var(--text);
+}
+
+.preset-list {
+    padding: 0.5rem;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.preset-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 0.75rem;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-align: left;
+}
+
+.preset-item:hover {
+    background: var(--surface2);
+    border-color: var(--border);
+}
+
+.preset-item.active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+}
+
+.preset-active {
+    font-size: 0.7rem;
+    color: var(--accent);
+    font-weight: 500;
+}
+
+/* Small button variant */
+.btn-sm {
+    padding: 0.375rem 0.625rem;
+    font-size: 0.75rem;
+}

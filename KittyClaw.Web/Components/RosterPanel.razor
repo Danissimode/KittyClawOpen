@@ -1,0 +1,101 @@
+@using KittyClaw.Core.Automation
+@using KittyClaw.Core.Automation.Runtimes
+@inject RosterStore RosterStore
+@inject ILogger<RosterPanel> Logger
+
+<div class="roster-panel">
+    <div class="roster-header">
+        <span class="roster-title">AI Team Roster</span>
+        <span class="roster-preset">@(RosterStore.GetActivePreset()?.Label ?? "No preset")</span>
+    </div>
+
+    <div class="roster-slots">
+        @foreach (var slot in RosterStore.Slots.Values.OrderBy(s => s.Role).ThenBy(s => s.Id))
+        {
+            var profile = GetProfileForSlot(slot);
+            <div class="roster-slot @(slot.Status == "available" ? "available" : slot.Status)">
+                <span class="slot-label">@slot.Label</span>
+                <span class="slot-model">@(profile?.DisplayName ?? "No model")</span>
+                <span class="slot-status @slot.Status">@GetStatusIcon(slot.Status)</span>
+            </div>
+        }
+    </div>
+
+    <div class="roster-actions">
+        <button class="btn btn-secondary btn-sm" @onclick="ShowPresetSwitcher">
+            Switch Preset
+        </button>
+        <button class="btn btn-ghost btn-sm" @onclick="RefreshSlots">
+            Refresh
+        </button>
+    </div>
+</div>
+
+@if (_showPresetSwitcher)
+{
+    <div class="preset-switcher-overlay" @onclick="ClosePresetSwitcher">
+        <div class="preset-switcher" @onclick:stopPropagation="true">
+            <div class="preset-switcher-header">
+                <span>Switch Roster Preset</span>
+                <button class="btn-close" @onclick="ClosePresetSwitcher">&times;</button>
+            </div>
+            <div class="preset-list">
+                @foreach (var preset in RosterStore.Presets.Values.OrderBy(p => p.SortOrder))
+                {
+                    <button class="preset-item @(preset.IsActive ? "active" : "")"
+                            @onclick="() => ActivatePreset(preset.Id)">
+                        <span class="preset-label">@preset.Label</span>
+                        @if (preset.IsActive)
+                        {
+                            <span class="preset-active">Active</span>
+                        }
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool _showPresetSwitcher;
+
+    private ModelProfileConfig? GetProfileForSlot(ExecutionSlot slot)
+    {
+        // Try to get profile from roster preset first
+        var activePreset = RosterStore.GetActivePreset();
+        if (activePreset?.Slots.TryGetValue(slot.Id, out var slotConfig) == true)
+        {
+            // Profile would be loaded from config - for now return null
+            // TODO: Load profiles from AgentRuntimeProjectConfig
+        }
+
+        // Fall back to slot's default
+        return null;
+    }
+
+    private string GetStatusIcon(string status) => status switch
+    {
+        "available" => "●",
+        "busy" => "◐",
+        "paused" => "○",
+        "error" => "✕",
+        _ => "?"
+    };
+
+    private void ShowPresetSwitcher() => _showPresetSwitcher = true;
+    private void ClosePresetSwitcher() => _showPresetSwitcher = false;
+
+    private void ActivatePreset(string presetId)
+    {
+        RosterStore.ActivatePreset(presetId);
+        _showPresetSwitcher = false;
+        StateHasChanged();
+        Logger.LogInformation("Switched to preset {PresetId}", presetId);
+    }
+
+    private void RefreshSlots()
+    {
+        RosterStore.Load();
+        StateHasChanged();
+    }
+}
