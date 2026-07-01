@@ -95,7 +95,7 @@ public sealed class OpenCodeRunner : IAgentRunner
             // Extract version, provider, and model from config
             return (completed && proc.ExitCode == 0, version.Trim(), _config.DefaultProvider, _config.DefaultModel);
         }
-        catch { return (false, null, _config.DefaultProvider, _config.DefaultModel); }
+        catch (Exception ex) { _logger?.LogDebug(ex, "DeepCheckAsync failed"); return (false, null, _config.DefaultProvider, _config.DefaultModel); }
     }
     
     private static bool TryFindInPath(string command)
@@ -114,7 +114,7 @@ public sealed class OpenCodeRunner : IAgentRunner
             using var process = Process.Start(processInfo);
             return process is not null;
         }
-        catch { return false; }
+        catch (Exception) { /* TryFindInPath failed — command not found or not executable */ return false; }
     }
     
     public async Task<AgentRunResult> StartAsync(AgentRunRequest request, CancellationToken cancellationToken)
@@ -402,7 +402,7 @@ public sealed class OpenCodeRunner : IAgentRunner
     private static void CleanupContextFile(string? path)
     {
         if (string.IsNullOrEmpty(path)) return;
-        try { File.Delete(path); } catch { }
+        try { File.Delete(path); } catch (Exception) { /* best-effort context file cleanup */ }
     }
 
     /// <summary>
@@ -715,7 +715,7 @@ public sealed class OpenCodeRunner : IAgentRunner
         finally
         {
             // Cleanup steering file
-            try { File.Delete(steerFile); } catch { }
+            try { File.Delete(steerFile); } catch (Exception ex) { _logger?.LogDebug(ex, "Steering file cleanup failed for {SteerFile}", steerFile); }
         }
     }
     
@@ -902,7 +902,7 @@ public sealed class OpenCodeRunner : IAgentRunner
     private static void CleanupPromptFile(string? promptFile)
     {
         if (string.IsNullOrEmpty(promptFile)) return;
-        try { File.Delete(promptFile); } catch { }
+        try { File.Delete(promptFile); } catch (Exception) { /* best-effort prompt file cleanup */ }
     }
 }
 

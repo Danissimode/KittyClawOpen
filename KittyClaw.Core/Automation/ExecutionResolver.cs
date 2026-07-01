@@ -60,7 +60,7 @@ public class ExecutionResolver
             // No slot assigned — use first available programmer slot or default
             slot = _slots.Values.FirstOrDefault(s => s.Role == "programmer" && s.Status == "available")
                 ?? _slots.Values.FirstOrDefault(s => s.Status == "available")
-                ?? _slots.Values.Values.First();
+                ?? _slots.Values.First();
             
             result.Reason = "no-slot-assigned";
         }

@@ -50,6 +50,13 @@ Thumbs.db
 .claude
 .vscode
 
+# Distribution / packaging artifacts
+dist/
+*.dmg
+
+# Test artifacts
+TestResults/
+
 # Agent skills, automations config and runtime state — local to each workspace.
 .agents
 .dashboard

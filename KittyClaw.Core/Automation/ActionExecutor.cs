@@ -504,6 +504,15 @@ internal sealed partial class ActionExecutor
         };
         _runs.Register(run);
         _sessions.SetLastDispatched(rt.Workspace!, agentName, DateTime.UtcNow);
+
+        // If the caller already cancelled before we even reached this point, mark the run
+        // stopped immediately so WaitForRunEndAsync observers don't spin forever.
+        if (ct.IsCancellationRequested)
+        {
+            _runs.Complete(runId, AgentRunStatus.Stopped, null);
+            return (false, Task.FromResult(run), agentName);
+        }
+
         if (firing.TicketId is not null)
         {
             try { await _tickets.AddActivityAsync(rt.Slug, firing.TicketId.Value, _loc.Get("ActAgentStarted", agentName), "automation"); }

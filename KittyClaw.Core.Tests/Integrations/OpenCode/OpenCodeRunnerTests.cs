@@ -93,7 +93,7 @@ public class OpenCodeRunnerTests
         Assert.Null(config.ServerUrl);
         Assert.Null(config.CliCommand);
         Assert.Equal("openrouter", config.DefaultProvider);
-        Assert.Equal("anthropic/claude-3-5-sonnet-20241022", config.DefaultModel);
+        Assert.Equal("openrouter/anthropic/claude-3-5-sonnet", config.DefaultModel);
         Assert.Equal("build", config.DefaultAgent);
         Assert.Equal(3600, config.TimeoutSeconds);
     }

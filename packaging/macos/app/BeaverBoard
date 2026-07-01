@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Beaver Board macOS Launcher
+# ---------------------------
+# Detects an already-running backend (via runtime/port.json) and either
+# opens the existing URL or starts a new self-contained backend instance.
+
+APP_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+BACKEND_DIR="$APP_ROOT/Resources/app"
+BACKEND_BIN="$BACKEND_DIR/KittyClaw.Web"
+
+# Platform paths
+DATA_DIR="$HOME/Library/Application Support/BeaverBoard"
+LOGS_DIR="$HOME/Library/Logs/BeaverBoard"
+RUNTIME_DIR="$DATA_DIR/runtime"
+PORT_FILE="$RUNTIME_DIR/port.json"
+PID_FILE="$RUNTIME_DIR/backend.pid"
+LOCK_FILE="$RUNTIME_DIR/app.lock"
+LOG_FILE="$LOGS_DIR/beaver-board.log"
+
+mkdir -p "$DATA_DIR" "$LOGS_DIR" "$RUNTIME_DIR"
+
+# --- Check for already-running backend ----------------------------------------
+if [ -f "$PORT_FILE" ]; then
+    # Parse port.json (minimal JSON: extract "url" and "pid")
+    URL=$(grep -o '"url"[^"]*"[^"]*"' "$PORT_FILE" | sed 's/.*"\(.*\)".*/\1/' || true)
+    PID=$(grep -o '"pid"[[:space:]]*:[[:space:]]*[0-9]*' "$PORT_FILE" | grep -o '[0-9]*' || true)
+
+    if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
+        echo "Beaver Board is already running at $URL" >> "$LOG_FILE"
+        open "$URL"
+        exit 0
+    else
+        # Stale PID — cleanup
+        rm -f "$PORT_FILE" "$PID_FILE" "$LOCK_FILE"
+    fi
+fi
+
+# --- Acquire runtime lock -----------------------------------------------------
+if [ -f "$LOCK_FILE" ]; then
+    LOCK_PID=$(cat "$LOCK_FILE" 2>/dev/null || true)
+    if [ -n "$LOCK_PID" ] && kill -0 "$LOCK_PID" 2>/dev/null; then
+        echo "Another Beaver Board instance is starting (PID $LOCK_PID). Waiting..." >> "$LOG_FILE"
+        # Wait up to 10 seconds for the other instance to write port.json
+        for i in $(seq 1 20); do
+            if [ -f "$PORT_FILE" ]; then
+                URL=$(grep -o '"url"[^"]*"[^"]*"' "$PORT_FILE" | sed 's/.*"\(.*\)".*/\1/' || true)
+                open "$URL"
+                exit 0
+            fi
+            sleep 0.5
+        done
+        echo "Lock holder did not start; taking over." >> "$LOG_FILE"
+    fi
+    rm -f "$LOCK_FILE"
+fi
+
+echo $$ > "$LOCK_FILE"
+
+# --- Start backend ------------------------------------------------------------
+echo "Starting Beaver Board backend..." >> "$LOG_FILE"
+
+export BEAVERBOARD_DATA_DIR="$DATA_DIR"
+export BEAVERBOARD_LOGS_DIR="$LOGS_DIR"
+export ASPNETCORE_ENVIRONMENT="Production"
+
+# Find a free port (default 5230, fallback)
+PORT=5230
+while lsof -Pi ":$PORT" -sTCP:LISTEN -t >/dev/null 2>&1; do
+    PORT=$((PORT + 1))
+    if [ "$PORT" -gt 6000 ]; then
+        echo "No free port found between 5230-6000" >> "$LOG_FILE"
+        rm -f "$LOCK_FILE"
+        exit 1
+    fi
+done
+
+# Start the backend in the background
+nohup "$BACKEND_BIN" --urls "http://127.0.0.1:$PORT" >> "$LOG_FILE" 2>&1 &
+BACKEND_PID=$!
+echo "$BACKEND_PID" > "$PID_FILE"
+
+# --- Wait for health endpoint -------------------------------------------------
+HEALTH_URL="http://127.0.0.1:$PORT/health"
+for i in $(seq 1 60); do
+    if curl -sf "$HEALTH_URL" >/dev/null 2>&1; then
+        # Write port descriptor
+        cat > "$PORT_FILE" <<EOF
+{
+  "host": "127.0.0.1",
+  "port": $PORT,
+  "url": "http://127.0.0.1:$PORT",
+  "pid": $BACKEND_PID,
+  "startedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
+EOF
+        rm -f "$LOCK_FILE"
+        open "http://127.0.0.1:$PORT"
+        exit 0
+    fi
+    sleep 0.5
+done
+
+# Timeout — backend did not start
+rm -f "$LOCK_FILE" "$PID_FILE"
+exit 1
