@@ -1,0 +1,121 @@
+/* ==========================================================================
+   Beaver Board Design System v1.0 — Tokens
+   Approved Baseline: 2026-07-01
+   Source: design-system/beaver-board-design-system.html
+   ========================================================================== */
+
+:root {
+  /* --- A. Primitive Tokens --- */
+  --bb-orange-500: #F97316;
+  --bb-orange-600: #EA580C;
+  --bb-amber-500: #F59E0B;
+  --bb-brown-700: #8B4513;
+  --bb-brown-900: #5D3A1A;
+  
+  --bb-neutral-950: #09090B;
+  --bb-neutral-900: #111113;
+  --bb-neutral-850: #18181B;
+  --bb-neutral-800: #27272A;
+  --bb-neutral-700: #3F3F46;
+  --bb-neutral-500: #71717A;
+  --bb-neutral-400: #A1A1AA;
+  --bb-neutral-50: #FAFAFA;
+  
+  --bb-green-500: #3ECF8E;
+  --bb-red-500: #F06B6B;
+  --bb-blue-500: #3B82F6;
+
+  /* --- B. Semantic Tokens --- */
+  --color-bg-app: var(--bb-neutral-950);
+  --color-bg-panel: var(--bb-neutral-900);
+  --color-bg-raised: var(--bb-neutral-850);
+  --color-bg-overlay: var(--bb-neutral-800);
+  
+  --color-text-primary: var(--bb-neutral-50);
+  --color-text-secondary: var(--bb-neutral-400);
+  --color-text-muted: var(--bb-neutral-500);
+  
+  --color-border-subtle: var(--bb-neutral-800);
+  --color-border-strong: var(--bb-neutral-700);
+  --color-border-focus: var(--bb-orange-500);
+  
+  --color-action-primary: var(--bb-orange-500);
+  --color-action-primary-hover: var(--bb-orange-600);
+  
+  --color-status-success: var(--bb-green-500);
+  --color-status-error: var(--bb-red-500);
+  --color-status-info: var(--bb-blue-500);
+  --color-status-warning: var(--bb-amber-500);
+
+  /* Dim/Alpha Statuses */
+  --color-status-success-dim: rgba(62, 207, 142, 0.15);
+  --color-status-error-dim: rgba(240, 107, 107, 0.15);
+  --color-status-info-dim: rgba(59, 130, 246, 0.15);
+  --color-status-warning-dim: rgba(245, 158, 11, 0.15);
+
+  /* --- C. Component Tokens --- */
+  --button-primary-bg: var(--color-action-primary);
+  --button-primary-bg-hover: var(--color-action-primary-hover);
+  --button-primary-text: #FFFFFF;
+  
+  --card-bg: var(--color-bg-panel);
+  --card-border: var(--color-border-subtle);
+  --card-border-hover: var(--color-border-strong);
+  
+  --agent-idle-bg: rgba(113, 113, 122, 0.1);
+  --agent-assigned-bg: var(--color-status-warning-dim);
+  --agent-running-bg: var(--color-status-info-dim);
+  --agent-blocked-bg: var(--color-status-error-dim);
+  --agent-completed-bg: var(--color-status-success-dim);
+
+  /* --- D. Spacing Scale --- */
+  --space-1: 0.25rem;  /* 4px */
+  --space-2: 0.5rem;   /* 8px */
+  --space-3: 0.75rem;  /* 12px */
+  --space-4: 1rem;     /* 16px */
+  --space-5: 1.25rem;  /* 20px */
+  --space-6: 1.5rem;   /* 24px */
+  --space-8: 2rem;     /* 32px */
+  --space-10: 2.5rem;  /* 40px */
+  --space-12: 3rem;    /* 48px */
+  --space-16: 4rem;    /* 64px */
+
+  /* --- E. Typography Scale --- */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', Menlo, monospace;
+  
+  --font-size-xs: 0.75rem;     /* 12px */
+  --font-size-sm: 0.875rem;    /* 14px */
+  --font-size-md: 1rem;        /* 16px */
+  --font-size-lg: 1.125rem;    /* 18px */
+  --font-size-xl: 1.25rem;     /* 20px */
+  --font-size-2xl: 1.5rem;     /* 24px */
+  --font-size-3xl: 2rem;       /* 32px */
+  --font-size-display: 2.5rem; /* 40px */
+
+  --line-height-tight: 1.1;
+  --line-height-heading: 1.2;
+  --line-height-body: 1.5;
+  --line-height-code: 1.6;
+
+  /* --- F. Radii & Shadows & Motion --- */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  --shadow-none: none;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -4px rgba(0, 0, 0, 0.6);
+  
+  --shadow-focus-orange: 0 0 0 3px rgba(249, 115, 22, 0.3);
+  --shadow-agent-active: 0 0 0 1px rgba(59, 130, 246, 0.4), 0 8px 24px rgba(0, 0, 0, 0.4);
+  
+  --motion-fast: 120ms cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-base: 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-slow: 240ms cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* --- G. Layout Tokens --- */
+  --sidebar-width: 260px;
+}

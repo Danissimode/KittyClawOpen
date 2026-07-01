@@ -1,0 +1,862 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Beaver Board Design System v1.0 — Approved Baseline</title>
+  <meta name="description" content="Beaver Board Design System v1.0 — Approved Baseline. Production-ready tokens, components, and governance for the Beaver Board Kanban UI." />
+  <meta name="version" content="1.0.0" />
+  <meta name="status" content="Approved Baseline" />
+  <meta name="approved-date" content="2026-07-01" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- External token and component files (for reference; inline for portability) -->
+  <!-- <link rel="stylesheet" href="tokens.css" /> -->
+  <!-- <link rel="stylesheet" href="components.css" /> -->
+
+  <style>
+    /* ==========================================================================
+       1. FOUNDATIONS: TOKENS (Primitive -> Semantic -> Component)
+       ========================================================================== */
+    :root {
+      /* --- A. Primitive Tokens --- */
+      --bb-orange-500: #F97316;
+      --bb-orange-600: #EA580C;
+      --bb-amber-500: #F59E0B;
+      --bb-brown-700: #8B4513;
+      --bb-brown-900: #5D3A1A;
+      
+      --bb-neutral-950: #09090B;
+      --bb-neutral-900: #111113;
+      --bb-neutral-850: #18181B;
+      --bb-neutral-800: #27272A;
+      --bb-neutral-700: #3F3F46;
+      --bb-neutral-500: #71717A;
+      --bb-neutral-400: #A1A1AA;
+      --bb-neutral-50: #FAFAFA;
+      
+      --bb-green-500: #3ECF8E;
+      --bb-red-500: #F06B6B;
+      --bb-blue-500: #3B82F6;
+
+      /* --- B. Semantic Tokens --- */
+      --color-bg-app: var(--bb-neutral-950);
+      --color-bg-panel: var(--bb-neutral-900);
+      --color-bg-raised: var(--bb-neutral-850);
+      --color-bg-overlay: var(--bb-neutral-800);
+      
+      --color-text-primary: var(--bb-neutral-50);
+      --color-text-secondary: var(--bb-neutral-400);
+      --color-text-muted: var(--bb-neutral-500);
+      
+      --color-border-subtle: var(--bb-neutral-800);
+      --color-border-strong: var(--bb-neutral-700);
+      --color-border-focus: var(--bb-orange-500);
+      
+      --color-action-primary: var(--bb-orange-500);
+      --color-action-primary-hover: var(--bb-orange-600);
+      
+      --color-status-success: var(--bb-green-500);
+      --color-status-error: var(--bb-red-500);
+      --color-status-info: var(--bb-blue-500);
+      --color-status-warning: var(--bb-amber-500);
+
+      /* Dim/Alpha Statuses */
+      --color-status-success-dim: rgba(62, 207, 142, 0.15);
+      --color-status-error-dim: rgba(240, 107, 107, 0.15);
+      --color-status-info-dim: rgba(59, 130, 246, 0.15);
+      --color-status-warning-dim: rgba(245, 158, 11, 0.15);
+
+      /* --- C. Component Tokens --- */
+      --button-primary-bg: var(--color-action-primary);
+      --button-primary-bg-hover: var(--color-action-primary-hover);
+      --button-primary-text: #FFFFFF;
+      
+      --card-bg: var(--color-bg-panel);
+      --card-border: var(--color-border-subtle);
+      --card-border-hover: var(--color-border-strong);
+      
+      --agent-idle-bg: rgba(113, 113, 122, 0.1);
+      --agent-assigned-bg: var(--color-status-warning-dim);
+      --agent-running-bg: var(--color-status-info-dim);
+      --agent-blocked-bg: var(--color-status-error-dim);
+      --agent-completed-bg: var(--color-status-success-dim);
+
+      /* --- D. Spacing Scale --- */
+      --space-1: 0.25rem;  /* 4px */
+      --space-2: 0.5rem;   /* 8px */
+      --space-3: 0.75rem;  /* 12px */
+      --space-4: 1rem;     /* 16px */
+      --space-5: 1.25rem;  /* 20px */
+      --space-6: 1.5rem;   /* 24px */
+      --space-8: 2rem;     /* 32px */
+      --space-10: 2.5rem;  /* 40px */
+      --space-12: 3rem;    /* 48px */
+      --space-16: 4rem;    /* 64px */
+
+      /* --- E. Typography Scale --- */
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', 'IBM Plex Mono', Menlo, monospace;
+      
+      --font-size-xs: 0.75rem;     /* 12px */
+      --font-size-sm: 0.875rem;    /* 14px */
+      --font-size-md: 1rem;        /* 16px */
+      --font-size-lg: 1.125rem;    /* 18px */
+      --font-size-xl: 1.25rem;     /* 20px */
+      --font-size-2xl: 1.5rem;     /* 24px */
+      --font-size-3xl: 2rem;       /* 32px */
+      --font-size-display: 2.5rem; /* 40px */
+
+      --line-height-tight: 1.1;
+      --line-height-heading: 1.2;
+      --line-height-body: 1.5;
+      --line-height-code: 1.6;
+
+      /* --- F. Radii & Shadows & Motion --- */
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-full: 9999px;
+
+      --shadow-none: none;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -4px rgba(0, 0, 0, 0.6);
+      
+      --shadow-focus-orange: 0 0 0 3px rgba(249, 115, 22, 0.3);
+      --shadow-agent-active: 0 0 0 1px rgba(59, 130, 246, 0.4), 0 8px 24px rgba(0, 0, 0, 0.4);
+      
+      --motion-fast: 120ms cubic-bezier(0.4, 0, 0.2, 1);
+      --motion-base: 180ms cubic-bezier(0.4, 0, 0.2, 1);
+      --motion-slow: 240ms cubic-bezier(0.4, 0, 0.2, 1);
+      
+      /* --- G. Layout Tokens --- */
+      --sidebar-width: 260px;
+    }
+
+    /* ==========================================================================
+       2. RESET & BASE UTILS
+       ========================================================================== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--color-bg-app);
+      color: var(--color-text-primary);
+      font-family: var(--font-sans);
+      font-size: var(--font-size-sm);
+      line-height: var(--line-height-body);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    
+    a { color: inherit; text-decoration: none; }
+    ul { list-style: none; }
+    button { border: none; background: none; font: inherit; cursor: pointer; }
+    
+    :focus-visible { 
+      outline: none; 
+      box-shadow: var(--shadow-focus-orange); 
+      border-radius: var(--radius-sm); 
+    }
+    
+    .mono { font-family: var(--font-mono); }
+    .text-muted { color: var(--color-text-muted); }
+    .text-secondary { color: var(--color-text-secondary); }
+    .flex { display: flex; }
+    .gap-2 { gap: var(--space-2); }
+    .gap-3 { gap: var(--space-3); }
+    .gap-4 { gap: var(--space-4); }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+
+    /* ==========================================================================
+       3. DOCUMENTATION SHELL (Responsive)
+       ========================================================================== */
+    .docs-layout { display: flex; min-height: 100vh; flex-direction: row; }
+    
+    .docs-sidebar {
+      width: var(--sidebar-width);
+      background: var(--color-bg-panel);
+      border-right: 1px solid var(--color-border-subtle);
+      position: fixed;
+      top: 0; bottom: 0; left: 0;
+      overflow-y: auto;
+      padding: var(--space-6) var(--space-4);
+      z-index: 10;
+    }
+
+    .docs-brand {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      font-weight: 600;
+      font-size: var(--font-size-lg);
+      margin-bottom: var(--space-8);
+      color: var(--color-action-primary);
+    }
+    
+    .docs-nav-group { margin-bottom: var(--space-6); }
+    .docs-nav-title {
+      font-family: var(--font-mono);
+      font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: var(--space-3);
+      padding-left: var(--space-2);
+    }
+    .docs-nav-link {
+      display: block;
+      padding: var(--space-2) var(--space-3);
+      color: var(--color-text-secondary);
+      font-size: var(--font-size-sm);
+      border-radius: var(--radius-sm);
+      margin-bottom: 2px;
+      transition: all var(--motion-fast);
+    }
+    .docs-nav-link:hover, .docs-nav-link.active {
+      background: var(--color-bg-raised);
+      color: var(--color-text-primary);
+    }
+
+    .docs-main {
+      flex: 1;
+      margin-left: var(--sidebar-width);
+      padding: var(--space-12) var(--space-16);
+      max-width: 1200px;
+    }
+
+    @media (max-width: 1024px) {
+      .docs-layout { flex-direction: column; }
+      .docs-sidebar {
+        position: static;
+        width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--color-border-subtle);
+        padding: var(--space-4);
+      }
+      .docs-nav-group { margin-bottom: var(--space-4); }
+      .docs-main {
+        margin-left: 0;
+        padding: var(--space-6) var(--space-4);
+      }
+    }
+
+    /* Section Styles */
+    .section-title { font-size: var(--font-size-3xl); font-weight: 600; letter-spacing: -0.02em; margin-bottom: var(--space-2); }
+    .section-desc { font-size: var(--font-size-lg); color: var(--color-text-secondary); margin-bottom: var(--space-12); max-width: 700px; line-height: 1.4; }
+    
+    .block-title { font-size: var(--font-size-xl); font-weight: 500; margin-bottom: var(--space-6); border-bottom: 1px solid var(--color-border-subtle); padding-bottom: var(--space-3); }
+
+    .showcase-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: var(--space-8);
+      margin-bottom: var(--space-12);
+    }
+
+    .showcase-card {
+      background: var(--color-bg-panel);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+    }
+
+    .showcase-label {
+      font-family: var(--font-mono);
+      font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    /* ==========================================================================
+       4. FOUNDATION VISUALS
+       ========================================================================== */
+    .color-swatch-group { display: flex; flex-direction: column; gap: var(--space-2); }
+    .color-swatch { display: flex; align-items: center; gap: var(--space-4); }
+    .color-box { width: 48px; height: 48px; border-radius: var(--radius-md); border: 1px solid var(--color-border-strong); }
+    .color-meta { display: flex; flex-direction: column; font-family: var(--font-mono); font-size: var(--font-size-xs); }
+    .color-meta strong { color: var(--color-text-primary); font-weight: 500; font-size: var(--font-size-sm); }
+    
+    .space-bar-container { display: flex; flex-direction: column; gap: var(--space-3); }
+    .space-bar-row { display: flex; align-items: center; gap: var(--space-4); }
+    .space-bar-meta { width: 80px; font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-secondary); }
+    .space-bar { height: 16px; background: var(--color-action-primary); border-radius: 2px; }
+
+    /* ==========================================================================
+       5. COMPONENTS CSS (Production Ready)
+       ========================================================================== */
+    
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-sm);
+      font-family: var(--font-sans); font-size: var(--font-size-sm); font-weight: 500;
+      transition: all var(--motion-fast);
+      user-select: none;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .btn-primary { background: var(--button-primary-bg); color: var(--button-primary-text); border: 1px solid var(--button-primary-bg); }
+    .btn-primary:hover:not(:disabled) { background: var(--button-primary-bg-hover); border-color: var(--button-primary-bg-hover); }
+    .btn-primary:active:not(:disabled) { transform: translateY(1px); }
+    
+    .btn-secondary { background: var(--color-bg-raised); color: var(--color-text-primary); border: 1px solid var(--color-border-strong); }
+    .btn-secondary:hover:not(:disabled) { background: var(--color-bg-overlay); border-color: var(--color-text-muted); }
+    .btn-secondary:active:not(:disabled) { transform: translateY(1px); }
+
+    .btn-ghost { background: transparent; color: var(--color-text-secondary); border: 1px solid transparent; }
+    .btn-ghost:hover:not(:disabled) { background: var(--color-bg-raised); color: var(--color-text-primary); }
+
+    /* Inputs */
+    .input-group { display: flex; flex-direction: column; gap: var(--space-2); width: 100%; }
+    .input-label { font-size: var(--font-size-xs); font-weight: 500; color: var(--color-text-secondary); }
+    .input {
+      width: 100%;
+      background: var(--color-bg-app);
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-sm);
+      padding: var(--space-2) var(--space-3);
+      color: var(--color-text-primary);
+      font-family: var(--font-sans);
+      font-size: var(--font-size-sm);
+      transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
+    }
+    .input::placeholder { color: var(--color-text-muted); }
+    .input:focus { outline: none; border-color: var(--color-action-primary); box-shadow: var(--shadow-focus-orange); }
+    .input.is-error { border-color: var(--color-status-error); }
+    .input.is-error:focus { box-shadow: 0 0 0 3px var(--color-status-error-dim); }
+    .input-msg-error { font-size: var(--font-size-xs); color: var(--color-status-error); }
+
+    /* Badges */
+    .badge {
+      display: inline-flex; align-items: center; gap: var(--space-2);
+      padding: 0.15rem var(--space-2);
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono); font-size: var(--font-size-xs); font-weight: 500;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .badge-default { background: var(--color-bg-raised); color: var(--color-text-secondary); border-color: var(--color-border-strong); }
+    .badge-outline { background: transparent; color: var(--color-text-muted); border: 1px dashed var(--color-border-strong); }
+    
+    /* Semantic Status Badges */
+    .badge-agent-idle { background: var(--agent-idle-bg); color: var(--color-text-secondary); border-color: rgba(113, 113, 122, 0.3); }
+    .badge-agent-assigned { background: var(--agent-assigned-bg); color: var(--color-status-warning); border-color: rgba(245, 158, 11, 0.3); }
+    .badge-agent-running { background: var(--agent-running-bg); color: var(--color-status-info); border-color: rgba(59, 130, 246, 0.4); }
+    .badge-agent-blocked { background: var(--agent-blocked-bg); color: var(--color-status-error); border-color: rgba(240, 107, 107, 0.3); }
+    .badge-agent-completed { background: var(--agent-completed-bg); color: var(--color-status-success); border-color: rgba(62, 207, 142, 0.3); }
+
+    /* ==========================================================================
+       6. PATTERNS & STATES
+       ========================================================================== */
+    
+    /* Skeleton Loader */
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .skeleton {
+      background: linear-gradient(90deg, var(--color-bg-raised) 25%, var(--color-border-subtle) 50%, var(--color-bg-raised) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 2s infinite linear;
+      border-radius: var(--radius-sm);
+    }
+    .sk-bar { height: 16px; margin-bottom: var(--space-2); }
+    .sk-w-full { width: 100%; } .sk-w-3-4 { width: 75%; } .sk-w-1-2 { width: 50%; }
+
+    /* Empty & Error States */
+    .state-block {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: var(--space-8) var(--space-4);
+      text-align: center;
+      background: var(--color-bg-app);
+      border: 1px dashed var(--color-border-strong);
+      border-radius: var(--radius-md);
+    }
+    .state-block.is-error { border-color: var(--color-status-error-dim); background: rgba(240, 107, 107, 0.02); }
+    .state-icon { margin-bottom: var(--space-4); color: var(--color-text-muted); }
+    .state-block.is-error .state-icon { color: var(--color-status-error); }
+    .state-title { font-size: var(--font-size-md); font-weight: 500; color: var(--color-text-primary); margin-bottom: var(--space-1); }
+    .state-desc { font-size: var(--font-size-sm); color: var(--color-text-secondary); max-width: 300px; margin-bottom: var(--space-4); }
+
+    /* Kanban Card */
+    .k-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: var(--space-4);
+      display: flex; flex-direction: column; gap: var(--space-3);
+      box-shadow: var(--shadow-sm);
+      transition: all var(--motion-base);
+      cursor: grab;
+      position: relative;
+    }
+    .k-card:hover { border-color: var(--card-border-hover); box-shadow: var(--shadow-md); }
+    .k-card:focus-visible { outline: none; border-color: var(--color-action-primary); box-shadow: var(--shadow-focus-orange); }
+    
+    /* Card Variants */
+    .k-card.is-running { border-color: var(--color-status-info); box-shadow: var(--shadow-agent-active); }
+    .k-card.is-blocked { border-color: var(--color-status-error); background: rgba(240, 107, 107, 0.02); }
+    .k-card.is-review { border-color: var(--color-status-warning); }
+    .k-card.is-done { opacity: 0.6; }
+
+    .k-card-header { display: flex; justify-content: space-between; align-items: flex-start; }
+    .k-card-title { font-size: var(--font-size-sm); font-weight: 500; color: var(--color-text-primary); line-height: var(--line-height-heading); }
+    
+    .k-card-props {
+      display: grid; grid-template-columns: 60px 1fr; gap: var(--space-1) var(--space-2);
+      font-family: var(--font-mono); font-size: 11px;
+      align-items: center; margin-top: var(--space-2);
+    }
+    .k-card-props span:nth-child(odd) { color: var(--color-text-muted); }
+    .k-card-props span:nth-child(even) { color: var(--color-text-secondary); }
+
+    /* Evidence Panel / Drawer */
+    .drawer-panel {
+      background: var(--color-bg-app);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    
+    .drawer-header {
+      padding: var(--space-4) var(--space-5);
+      background: var(--color-bg-panel);
+      border-bottom: 1px solid var(--color-border-subtle);
+      display: flex; flex-direction: column; gap: var(--space-2);
+    }
+    
+    .drawer-tabs { display: flex; border-bottom: 1px solid var(--color-border-subtle); background: var(--color-bg-panel); overflow-x: auto;}
+    .drawer-tab {
+      padding: var(--space-3) var(--space-4);
+      font-size: var(--font-size-sm); font-weight: 500; color: var(--color-text-secondary);
+      border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap;
+    }
+    .drawer-tab:hover { color: var(--color-text-primary); }
+    .drawer-tab.active { color: var(--color-text-primary); border-bottom-color: var(--color-action-primary); }
+    .drawer-tab:focus-visible { outline: none; background: var(--color-bg-raised); }
+
+    .evidence-block { padding: var(--space-4); border-bottom: 1px solid var(--color-border-subtle); }
+    .evidence-title { font-size: var(--font-size-sm); font-weight: 500; margin-bottom: var(--space-2); display: flex; justify-content: space-between; align-items: center;}
+    .terminal-log {
+      background: var(--color-bg-raised); border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-sm); padding: var(--space-3);
+      font-family: var(--font-mono); font-size: 11px; color: var(--color-text-muted);
+      line-height: var(--line-height-code); overflow-x: auto;
+    }
+
+    /* Markdown rules blocks */
+    .md-block {
+      background: var(--color-bg-panel); border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius-md); padding: var(--space-6);
+      font-size: var(--font-size-sm); color: var(--color-text-secondary);
+      height: 100%;
+    }
+    .md-block h3 { color: var(--color-text-primary); margin-bottom: var(--space-3); font-size: var(--font-size-md); }
+    .md-block ul { list-style: disc; padding-left: var(--space-6); display: flex; flex-direction: column; gap: var(--space-2); }
+    .md-block li strong { color: var(--color-text-primary); }
+
+  </style>
+</head>
+<body>
+
+  <!-- Version Banner -->
+  <div style="position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: var(--bb-orange-500); color: white; padding: 6px 16px; font-family: var(--font-mono); font-size: 11px; display: flex; justify-content: space-between; align-items: center;">
+    <span>Beaver Board Design System <strong>v1.0</strong> — Approved Baseline</span>
+    <span>2026-07-01 | governance.md</span>
+  </div>
+
+  <!-- Navigation -->
+  <aside class="docs-sidebar">
+    <div class="docs-brand">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M6.5 7 A 2 2 0 1 1 9.5 4.5" />
+        <path d="M14.5 4.5 A 2 2 0 1 1 17.5 7" />
+        <path d="M17.5 14 C17.5 8 15 4.5 12 4.5 C9 4.5 6.5 8 6.5 14" />
+        <circle cx="9.5" cy="9.5" r="1.2" fill="currentColor" stroke="none" />
+        <circle cx="14.5" cy="9.5" r="1.2" fill="currentColor" stroke="none" />
+        <path d="M10.5 12 h3 l-1.5 2 z" fill="currentColor" stroke="none" />
+        <path d="M5.5 14 v-1.5 a1.5 1.5 0 0 1 3 0 v1.5" />
+        <path d="M15.5 14 v-1.5 a1.5 1.5 0 0 1 3 0 v1.5" />
+        <rect x="2" y="14" width="20" height="8" rx="1.5" fill="var(--color-bg-app)" />
+        <path d="M8.5 14 v8 M15.5 14 v8" />
+      </svg>
+      Beaver Board <span style="font-size: 10px; opacity: 0.7;">v1.0</span>
+    </div>
+
+    <div class="docs-nav-group">
+      <div class="docs-nav-title">Foundations</div>
+      <a href="#tokens" class="docs-nav-link active">Design Tokens</a>
+      <a href="#spacing" class="docs-nav-link">Spacing & Layout</a>
+    </div>
+
+    <div class="docs-nav-group">
+      <div class="docs-nav-title">Components</div>
+      <a href="#core-components" class="docs-nav-link">Buttons & Inputs</a>
+      <a href="#ui-states" class="docs-nav-link">UI States & Loaders</a>
+      <a href="#status" class="docs-nav-link">Agent Status System</a>
+    </div>
+
+    <div class="docs-nav-group">
+      <div class="docs-nav-title">Product Patterns</div>
+      <a href="#kanban" class="docs-nav-link">Kanban Card States</a>
+      <a href="#drawer" class="docs-nav-link">Agent Run Drawer</a>
+    </div>
+    
+    <div class="docs-nav-group">
+      <div class="docs-nav-title">Governance</div>
+      <a href="#rules" class="docs-nav-link">AI Agent Rules</a>
+    </div>
+  </aside>
+
+  <!-- Main Documentation -->
+  <main class="docs-main">
+    
+    <header style="margin-bottom: var(--space-12);">
+      <h1 class="section-title">Production Design System</h1>
+      <p class="section-desc">The single source of truth for Beaver Board UI. Defines strictly how task cards, AI agents, OpenCode sessions, and command chats are rendered locally.</p>
+    </header>
+
+    <!-- TOKENS -->
+    <section id="tokens">
+      <h2 class="block-title">Taxonomy: Semantic Colors</h2>
+      <div class="showcase-grid">
+        
+        <div class="showcase-card">
+          <div class="showcase-label">Surfaces</div>
+          <div class="color-swatch-group">
+            <div class="color-swatch">
+              <div class="color-box" style="background: var(--color-bg-app);"></div>
+              <div class="color-meta"><strong>--color-bg-app</strong>Main application shell (#09090B)</div>
+            </div>
+            <div class="color-swatch">
+              <div class="color-box" style="background: var(--color-bg-panel);"></div>
+              <div class="color-meta"><strong>--color-bg-panel</strong>Cards, Sidebars, Drawers (#111113)</div>
+            </div>
+            <div class="color-swatch">
+              <div class="color-box" style="background: var(--color-bg-raised);"></div>
+              <div class="color-meta"><strong>--color-bg-raised</strong>Hover states, Inputs (#18181B)</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="showcase-card">
+          <div class="showcase-label">Semantic Status</div>
+          <div class="color-swatch-group">
+            <div class="color-swatch">
+              <div class="color-box" style="background: var(--color-status-success);"></div>
+              <div class="color-meta"><strong>--color-status-success</strong>Tests passed, Completed</div>
+            </div>
+            <div class="color-swatch">
+              <div class="color-box" style="background: var(--color-status-error);"></div>
+              <div class="color-meta"><strong>--color-status-error</strong>Blocked, Failed run</div>
+            </div>
+            <div class="color-swatch">
+              <div class="color-box" style="background: var(--color-status-info);"></div>
+              <div class="color-meta"><strong>--color-status-info</strong>Running, OpenCode active</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SPACING -->
+    <section id="spacing">
+      <h2 class="block-title">Spacing Scale</h2>
+      <div class="showcase-card" style="margin-bottom: var(--space-12);">
+        <div class="space-bar-container">
+          <div class="space-bar-row"><div class="space-bar-meta">--space-1 (4px)</div><div class="space-bar" style="width: 4px;"></div></div>
+          <div class="space-bar-row"><div class="space-bar-meta">--space-2 (8px)</div><div class="space-bar" style="width: 8px;"></div></div>
+          <div class="space-bar-row"><div class="space-bar-meta">--space-3 (12px)</div><div class="space-bar" style="width: 12px;"></div></div>
+          <div class="space-bar-row"><div class="space-bar-meta">--space-4 (16px)</div><div class="space-bar" style="width: 16px;"></div></div>
+          <div class="space-bar-row"><div class="space-bar-meta">--space-5 (20px)</div><div class="space-bar" style="width: 20px;"></div></div>
+          <div class="space-bar-row"><div class="space-bar-meta">--space-6 (24px)</div><div class="space-bar" style="width: 24px;"></div></div>
+          <div class="space-bar-row"><div class="space-bar-meta">--space-8 (32px)</div><div class="space-bar" style="width: 32px;"></div></div>
+          <div class="space-bar-row"><div class="space-bar-meta">--space-12 (48px)</div><div class="space-bar" style="width: 48px;"></div></div>
+          <div class="space-bar-row"><div class="space-bar-meta">--space-16 (64px)</div><div class="space-bar" style="width: 64px;"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CORE COMPONENTS (Buttons & Inputs) -->
+    <section id="core-components">
+      <h2 class="block-title">Buttons & Inputs</h2>
+      <div class="showcase-grid">
+        
+        <div class="showcase-card">
+          <div class="showcase-label">Button States</div>
+          <div class="flex gap-3" style="flex-direction: column; align-items: flex-start;">
+            <div class="flex gap-3">
+              <button class="btn btn-primary">Primary</button>
+              <button class="btn btn-secondary">Secondary</button>
+              <button class="btn btn-ghost">Ghost</button>
+            </div>
+            <div class="flex gap-3">
+              <button class="btn btn-primary" disabled>Disabled</button>
+              <button class="btn btn-secondary" disabled>Disabled</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="showcase-card">
+          <div class="showcase-label">Input States</div>
+          <div class="input-group">
+            <label class="input-label" for="default-input">Standard Input</label>
+            <input type="text" id="default-input" class="input" placeholder="e.g. Refactor Auth">
+          </div>
+          <div class="input-group" style="margin-top: var(--space-4);">
+            <label class="input-label" for="error-input">Error State</label>
+            <input type="text" id="error-input" class="input is-error" value="sk-invalid-format">
+            <span class="input-msg-error">Invalid API key format</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- UI STATES (Empty, Loading, Error) -->
+    <section id="ui-states">
+      <h2 class="block-title">UI States & Loaders</h2>
+      <div class="showcase-grid">
+        
+        <div class="showcase-card">
+          <div class="showcase-label">Skeleton Loading</div>
+          <div class="k-card" style="border-color: transparent; box-shadow: none; padding: 0;">
+            <div class="skeleton sk-bar sk-w-1-2"></div>
+            <div class="skeleton sk-bar sk-w-full"></div>
+            <div class="skeleton sk-bar sk-w-3-4"></div>
+            <div style="display: flex; gap: var(--space-2); margin-top: var(--space-4);">
+              <div class="skeleton sk-bar" style="width: 32px; height: 32px; border-radius: 50%;"></div>
+              <div class="skeleton sk-bar sk-w-1-2" style="height: 32px; border-radius: var(--radius-sm);"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="showcase-card">
+          <div class="showcase-label">Empty & Error States</div>
+          <div class="state-block" style="margin-bottom: var(--space-4);">
+            <svg class="state-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+            <div class="state-title">No blocked tasks</div>
+            <div class="state-desc">Your agents are running smoothly.</div>
+          </div>
+          
+          <div class="state-block is-error">
+            <svg class="state-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <div class="state-title">Connection Lost</div>
+            <div class="state-desc">Unable to reach local OpenCode instance.</div>
+            <button class="btn btn-secondary" style="margin-top: var(--space-2);">Retry Connection</button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- AGENT STATUS SYSTEM -->
+    <section id="status">
+      <h2 class="block-title">Agent Status System</h2>
+      <p class="section-desc" style="margin-bottom: var(--space-6); font-size: var(--font-size-md);">AI agents operate asynchronously. Their status must always be visibly apparent using exact semantic chips.</p>
+      
+      <div class="showcase-grid">
+        <div class="showcase-card">
+          <div class="showcase-label">Agent States Matrix</div>
+          <div class="flex gap-2" style="flex-direction: column; align-items: flex-start;">
+            <span class="badge badge-agent-idle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Idle / Unassigned</span>
+            <span class="badge badge-agent-assigned"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> Assigned to Task</span>
+            <span class="badge badge-agent-running"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg> Running OpenCode</span>
+            <span class="badge badge-agent-blocked"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> Blocked: Needs Decision</span>
+            <span class="badge badge-agent-completed"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Completed: PR Ready</span>
+          </div>
+        </div>
+
+        <div class="showcase-card">
+          <div class="showcase-label">Evidence Badges</div>
+          <div class="flex gap-2" style="flex-direction: column; align-items: flex-start;">
+            <span class="badge badge-outline">No Evidence attached</span>
+            <span class="badge badge-agent-completed"><span style="font-weight:700">✓</span> 3/3 Tests Passed</span>
+            <span class="badge badge-agent-assigned"><span style="font-weight:700">◓</span> Diff: 12 Files (Review)</span>
+            <span class="badge badge-agent-idle">📄 agent_report.md</span>
+            <span class="badge badge-agent-running" style="color:var(--color-status-info);">⎇ PR #42 Created</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- KANBAN CARD PATTERN -->
+    <section id="kanban">
+      <h2 class="block-title">Product Pattern: Kanban Card States</h2>
+      
+      <div class="showcase-grid">
+        
+        <!-- Default Task -->
+        <div class="k-card" tabindex="0">
+          <div class="k-card-header">
+            <span class="badge badge-default">BB-103</span>
+            <span class="badge badge-outline">Low Priority</span>
+          </div>
+          <div class="k-card-title">Document new auth architecture</div>
+          <div class="k-card-props">
+            <span>Agent:</span> <span>Unassigned</span>
+            <span>Status:</span> <span>Backlog</span>
+          </div>
+        </div>
+
+        <!-- Running Task -->
+        <div class="k-card is-running" tabindex="0">
+          <div class="k-card-header">
+            <span class="badge badge-default">BB-102</span>
+            <span class="badge badge-agent-running">Executing...</span>
+          </div>
+          <div class="k-card-title">Refactor legacy JWT middleware</div>
+          <div class="k-card-props">
+            <span>Agent:</span> <span style="color: var(--color-action-primary)">Agent-Roo</span>
+            <span>Backend:</span> <span>OpenCode</span>
+            <span>Runtime:</span> <span>02m 14s</span>
+          </div>
+        </div>
+
+        <!-- Blocked Task -->
+        <div class="k-card is-blocked" tabindex="0">
+          <div class="k-card-header">
+            <span class="badge badge-default">BB-098</span>
+            <span class="badge badge-agent-blocked">Blocked</span>
+          </div>
+          <div class="k-card-title">Update dependency injection container</div>
+          <div class="k-card-props">
+            <span>Agent:</span> <span style="color: var(--color-action-primary)">Agent-Coder</span>
+            <span>Blocker:</span> <span style="color: var(--color-status-error)">Missing ENV var</span>
+          </div>
+          <div style="margin-top: var(--space-2);">
+            <button class="btn btn-secondary" style="width: 100%; font-size: 11px; padding: 4px;">Review Chat</button>
+          </div>
+        </div>
+
+        <!-- Review Task -->
+        <div class="k-card is-review" tabindex="0">
+          <div class="k-card-header">
+            <span class="badge badge-default">BB-095</span>
+            <span class="badge badge-agent-assigned">Needs Review</span>
+          </div>
+          <div class="k-card-title">Implement dark mode toggle</div>
+          <div class="k-card-props">
+            <span>Agent:</span> <span style="color: var(--color-action-primary)">Agent-Roo</span>
+            <span>Evidence:</span> <span style="color: var(--color-status-success)">Tests passed, Diff ready</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- AGENT RUN DRAWER -->
+    <section id="drawer">
+      <h2 class="block-title">Product Pattern: Agent Run Drawer</h2>
+      <p class="section-desc" style="margin-bottom: var(--space-6); font-size: var(--font-size-md);">The standard side-panel for deep-diving into a specific agent's execution context.</p>
+
+      <div class="drawer-panel" style="max-width: 600px;">
+        <div class="drawer-header">
+          <div class="flex" style="justify-content: space-between; align-items: flex-start;">
+            <div>
+              <div class="mono" style="font-size: var(--font-size-xs); color: var(--color-text-muted); margin-bottom: 4px;">BB-102 // AGENT-ROO</div>
+              <div style="font-weight: 500; font-size: var(--font-size-lg);">Refactor legacy JWT middleware</div>
+            </div>
+            <span class="badge badge-agent-running">Running (02m 14s)</span>
+          </div>
+        </div>
+        
+        <div class="drawer-tabs" role="tablist">
+          <button class="drawer-tab" role="tab">Summary</button>
+          <button class="drawer-tab active" role="tab" aria-selected="true">Terminal Logs</button>
+          <button class="drawer-tab" role="tab">Diff (0)</button>
+          <button class="drawer-tab" role="tab">Tests</button>
+        </div>
+
+        <div class="evidence-block">
+          <div class="evidence-title">
+            OpenCode Execution Log 
+            <span class="badge badge-outline" style="border: none;">Live</span>
+          </div>
+          <div class="terminal-log">
+            > Analyzing repository context...<br>
+            > Found 4 references to legacy JWT library.<br>
+            > Updating src/middleware/auth.ts<br>
+            > <span style="color: var(--color-status-warning)">[WARN]</span> Type mismatch in UserPayload interface.<br>
+            > Generating patch for types/auth.d.ts<br>
+            > Running local typescript compiler...<br>
+            <span style="color: var(--color-action-primary)">_</span>
+          </div>
+        </div>
+        
+        <div style="padding: var(--space-4); background: var(--color-bg-panel); display: flex; gap: var(--space-2); justify-content: flex-end;">
+          <button class="btn btn-secondary">Abort Run</button>
+          <button class="btn btn-primary" disabled>Approve Patch</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- GOVERNANCE -->
+    <section id="rules">
+      <h2 class="block-title">Governance: AI Design Rules</h2>
+      
+      <div class="showcase-grid">
+        <div class="md-block">
+          <h3>When modifying Beaver Board UI:</h3>
+          <ul>
+            <li><strong>Use existing design tokens.</strong> Do not introduce raw hex colors (`#FF0000`, `#333`) in components.</li>
+            <li><strong>Follow Agent Status strictly.</strong> Running is Blue, Blocked is Red, Assigned/Waiting is Amber, Completed is Green.</li>
+            <li><strong>Kanban is sacred.</strong> Do not break the grid. Cards must remain compact and developer-readable.</li>
+            <li><strong>No KittyClaw branding.</strong> Do not use KittyClaw visual identity, old logos, or references in the UI.</li>
+            <li><strong>Evidence is required.</strong> Any task completion state must show how evidence (tests/diffs) is presented.</li>
+            <li><strong>Keep it a dev tool.</strong> Avoid generic SaaS styles, big bubbly buttons, or childish mascot overload. It must look like a tool for GitHub/terminal users.</li>
+          </ul>
+        </div>
+
+        <div class="md-block">
+          <h3>PR Review Checklist (Design Gate)</h3>
+          <ul>
+            <li>Uses `var(--color-bg-panel)` instead of `#111113`?</li>
+            <li>Spacing uses `var(--space-X)` variables?</li>
+            <li>Does the new feature have Empty, Loading, and Error states?</li>
+            <li>Are agent statuses using the semantic chips?</li>
+            <li>Is the contrast ratio WCAG AA compliant on dark backgrounds?</li>
+            <li>Does drag-and-drop have a keyboard alternative?</li>
+            <li>Is the focus outline (`:focus-visible`) intact?</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    document.querySelectorAll('.docs-nav-link').forEach(link => {
+      link.addEventListener('click', (e) => {
+        document.querySelectorAll('.docs-nav-link').forEach(l => l.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+      });
+    });
+    
+    document.querySelectorAll('.drawer-tab').forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        document.querySelectorAll('.drawer-tab').forEach(t => {
+          t.classList.remove('active');
+          t.setAttribute('aria-selected', 'false');
+        });
+        e.currentTarget.classList.add('active');
+        e.currentTarget.setAttribute('aria-selected', 'true');
+      });
+    });
+  </script>
+</body>
+</html>
