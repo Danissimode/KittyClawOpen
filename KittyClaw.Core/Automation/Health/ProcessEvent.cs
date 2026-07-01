@@ -3,16 +3,17 @@ namespace KittyClaw.Core.Automation.Health;
 /// <summary>
 /// A structured event in the Process Event Ledger.
 /// Replaces simple logging with actionable, linked, resolvable events.
+/// Every event has context and actionable actions.
 /// </summary>
 public sealed class ProcessEvent
 {
     public string Id { get; init; } = Guid.NewGuid().ToString("N");
     public required string ProjectSlug { get; init; }
     
-    /// <summary>Event severity: info, warning, error, critical</summary>
+    /// <summary>Event severity: info, notice, warning, error, critical, blocked, needs_human</summary>
     public required string Level { get; init; }
     
-    /// <summary>Event category: quota, watchdog, failure, reminder, system, health</summary>
+    /// <summary>Event category: runner, watchdog, scheduler, opencode, board, chat, evidence, done_gate, system, security, storage, dashboard, workflow, quota</summary>
     public required string Category { get; init; }
     
     /// <summary>Specific event type within category</summary>
@@ -26,21 +27,31 @@ public sealed class ProcessEvent
     
     // ── Links to entities ──────────────────────────────────────────────
     public int? TicketId { get; init; }
+    public int? ParentTicketId { get; init; }
     public string? RunId { get; init; }
     public string? AgentId { get; init; }
     public string? Provider { get; init; }
     public string? Model { get; init; }
+    public string? Runtime { get; init; }
     public string? SessionId { get; init; }
     
+    // ── OpenCode context ───────────────────────────────────────────────
+    public string? OpencodeSessionId { get; init; }
+    public string? OpencodeServerUrl { get; init; }
+    public string? OpencodeMode { get; init; }
+    
     // ── Source and context ─────────────────────────────────────────────
-    /// <summary>What generated this event: quota-probe, watchdog, automation, manual</summary>
+    /// <summary>What generated this event: RunWatchdog, QuotaProbe, Automation, Manual, etc.</summary>
     public required string Source { get; init; }
     
     /// <summary>Raw data from the source (JSON string)</summary>
     public string? RawPayload { get; init; }
     
+    /// <summary>Additional metadata (JSON)</summary>
+    public string? MetadataJson { get; init; }
+    
     // ── Lifecycle ──────────────────────────────────────────────────────
-    /// <summary>Event status: open, acknowledged, resolved, dismissed</summary>
+    /// <summary>Event status: open, acknowledged, in_progress, resolved, ignored, muted, superseded</summary>
     public string Status { get; set; } = "open";
     
     /// <summary>How the event was resolved</summary>
@@ -48,6 +59,9 @@ public sealed class ProcessEvent
     
     /// <summary>Who resolved the event</summary>
     public string? ResolvedBy { get; set; }
+    
+    /// <summary>Resolution note</summary>
+    public string? ResolutionNote { get; set; }
     
     // ── Suggested actions ──────────────────────────────────────────────
     /// <summary>JSON array of suggested action slugs</summary>

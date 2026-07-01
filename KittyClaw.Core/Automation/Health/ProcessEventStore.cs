@@ -40,16 +40,23 @@ public sealed class ProcessEventStore
                 Title TEXT NOT NULL,
                 Message TEXT,
                 TicketId INTEGER,
+                ParentTicketId INTEGER,
                 RunId TEXT,
                 AgentId TEXT,
                 Provider TEXT,
                 Model TEXT,
+                Runtime TEXT,
                 SessionId TEXT,
+                OpencodeSessionId TEXT,
+                OpencodeServerUrl TEXT,
+                OpencodeMode TEXT,
                 Source TEXT NOT NULL,
                 RawPayload TEXT,
+                MetadataJson TEXT,
                 Status TEXT NOT NULL DEFAULT 'open',
                 Resolution TEXT,
                 ResolvedBy TEXT,
+                ResolutionNote TEXT,
                 SuggestedActionsJson TEXT,
                 CreatedAt TEXT NOT NULL,
                 UpdatedAt TEXT NOT NULL,
@@ -64,6 +71,8 @@ public sealed class ProcessEventStore
             ON ProcessEvents (ProjectSlug, Level);
             CREATE INDEX IF NOT EXISTS IX_ProcessEvents_TicketId
             ON ProcessEvents (TicketId);
+            CREATE INDEX IF NOT EXISTS IX_ProcessEvents_ParentTicketId
+            ON ProcessEvents (ParentTicketId);
             CREATE INDEX IF NOT EXISTS IX_ProcessEvents_RunId
             ON ProcessEvents (RunId);
             CREATE INDEX IF NOT EXISTS IX_ProcessEvents_AgentId
@@ -85,11 +94,13 @@ public sealed class ProcessEventStore
         cmd.CommandText = """
             INSERT INTO ProcessEvents
             (Id, ProjectSlug, Level, Category, EventType, Title, Message,
-             TicketId, RunId, AgentId, Provider, Model, SessionId,
-             Source, RawPayload, Status, SuggestedActionsJson, CreatedAt, UpdatedAt)
+             TicketId, ParentTicketId, RunId, AgentId, Provider, Model, Runtime, SessionId,
+             OpencodeSessionId, OpencodeServerUrl, OpencodeMode,
+             Source, RawPayload, MetadataJson, Status, SuggestedActionsJson, CreatedAt, UpdatedAt)
             VALUES ($id, $project, $level, $category, $eventType, $title, $message,
-                    $ticketId, $runId, $agentId, $provider, $model, $sessionId,
-                    $source, $rawPayload, $status, $suggestedActions, $createdAt, $updatedAt)
+                    $ticketId, $parentTicketId, $runId, $agentId, $provider, $model, $runtime, $sessionId,
+                    $opencodeSessionId, $opencodeServerUrl, $opencodeMode,
+                    $source, $rawPayload, $metadata, $status, $suggestedActions, $createdAt, $updatedAt)
         """;
         cmd.Parameters.AddWithValue("$id", evt.Id);
         cmd.Parameters.AddWithValue("$project", evt.ProjectSlug);
@@ -99,13 +110,19 @@ public sealed class ProcessEventStore
         cmd.Parameters.AddWithValue("$title", evt.Title);
         cmd.Parameters.AddWithValue("$message", (object?)evt.Message ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$ticketId", (object?)evt.TicketId ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$parentTicketId", (object?)evt.ParentTicketId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$runId", (object?)evt.RunId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$agentId", (object?)evt.AgentId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$provider", (object?)evt.Provider ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$model", (object?)evt.Model ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$runtime", (object?)evt.Runtime ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$sessionId", (object?)evt.SessionId ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$opencodeSessionId", (object?)evt.OpencodeSessionId ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$opencodeServerUrl", (object?)evt.OpencodeServerUrl ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$opencodeMode", (object?)evt.OpencodeMode ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$source", evt.Source);
         cmd.Parameters.AddWithValue("$rawPayload", (object?)evt.RawPayload ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$metadata", (object?)evt.MetadataJson ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$status", evt.Status);
         cmd.Parameters.AddWithValue("$suggestedActions", (object?)evt.SuggestedActionsJson ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$createdAt", evt.CreatedAt.ToString("o"));
@@ -138,7 +155,7 @@ public sealed class ProcessEventStore
         return affected > 0;
     }
 
-    public async Task<bool> ResolveAsync(string projectSlug, string eventId, string? resolution = null, string? resolvedBy = null, CancellationToken ct = default)
+    public async Task<bool> ResolveAsync(string projectSlug, string eventId, string? resolution = null, string? resolvedBy = null, string? resolutionNote = null, CancellationToken ct = default)
     {
         var dbPath = DbPath(projectSlug);
         await EnsureTableAsync(dbPath);
@@ -149,13 +166,14 @@ public sealed class ProcessEventStore
         cmd.CommandText = """
             UPDATE ProcessEvents 
             SET Status = 'resolved', Resolution = $resolution, ResolvedBy = $resolvedBy,
-                ResolvedAt = $now, UpdatedAt = $now 
+                ResolutionNote = $resolutionNote, ResolvedAt = $now, UpdatedAt = $now 
             WHERE Id = $id AND ProjectSlug = $project
         """;
         cmd.Parameters.AddWithValue("$id", eventId);
         cmd.Parameters.AddWithValue("$project", projectSlug);
         cmd.Parameters.AddWithValue("$resolution", (object?)resolution ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$resolvedBy", (object?)resolvedBy ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$resolutionNote", (object?)resolutionNote ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow.ToString("o"));
         var affected = await cmd.ExecuteNonQueryAsync(ct);
         return affected > 0;
@@ -285,16 +303,23 @@ public sealed class ProcessEventStore
         Title = r.GetString(r.GetOrdinal("Title")),
         Message = r.IsDBNull(r.GetOrdinal("Message")) ? null : r.GetString(r.GetOrdinal("Message")),
         TicketId = r.IsDBNull(r.GetOrdinal("TicketId")) ? null : r.GetInt32(r.GetOrdinal("TicketId")),
+        ParentTicketId = r.IsDBNull(r.GetOrdinal("ParentTicketId")) ? null : r.GetInt32(r.GetOrdinal("ParentTicketId")),
         RunId = r.IsDBNull(r.GetOrdinal("RunId")) ? null : r.GetString(r.GetOrdinal("RunId")),
         AgentId = r.IsDBNull(r.GetOrdinal("AgentId")) ? null : r.GetString(r.GetOrdinal("AgentId")),
         Provider = r.IsDBNull(r.GetOrdinal("Provider")) ? null : r.GetString(r.GetOrdinal("Provider")),
         Model = r.IsDBNull(r.GetOrdinal("Model")) ? null : r.GetString(r.GetOrdinal("Model")),
+        Runtime = r.IsDBNull(r.GetOrdinal("Runtime")) ? null : r.GetString(r.GetOrdinal("Runtime")),
         SessionId = r.IsDBNull(r.GetOrdinal("SessionId")) ? null : r.GetString(r.GetOrdinal("SessionId")),
+        OpencodeSessionId = r.IsDBNull(r.GetOrdinal("OpencodeSessionId")) ? null : r.GetString(r.GetOrdinal("OpencodeSessionId")),
+        OpencodeServerUrl = r.IsDBNull(r.GetOrdinal("OpencodeServerUrl")) ? null : r.GetString(r.GetOrdinal("OpencodeServerUrl")),
+        OpencodeMode = r.IsDBNull(r.GetOrdinal("OpencodeMode")) ? null : r.GetString(r.GetOrdinal("OpencodeMode")),
         Source = r.GetString(r.GetOrdinal("Source")),
         RawPayload = r.IsDBNull(r.GetOrdinal("RawPayload")) ? null : r.GetString(r.GetOrdinal("RawPayload")),
+        MetadataJson = r.IsDBNull(r.GetOrdinal("MetadataJson")) ? null : r.GetString(r.GetOrdinal("MetadataJson")),
         Status = r.GetString(r.GetOrdinal("Status")),
         Resolution = r.IsDBNull(r.GetOrdinal("Resolution")) ? null : r.GetString(r.GetOrdinal("Resolution")),
         ResolvedBy = r.IsDBNull(r.GetOrdinal("ResolvedBy")) ? null : r.GetString(r.GetOrdinal("ResolvedBy")),
+        ResolutionNote = r.IsDBNull(r.GetOrdinal("ResolutionNote")) ? null : r.GetString(r.GetOrdinal("ResolutionNote")),
         SuggestedActionsJson = r.IsDBNull(r.GetOrdinal("SuggestedActionsJson")) ? null : r.GetString(r.GetOrdinal("SuggestedActionsJson")),
         CreatedAt = DateTimeOffset.Parse(r.GetString(r.GetOrdinal("CreatedAt"))),
         UpdatedAt = DateTimeOffset.Parse(r.GetString(r.GetOrdinal("UpdatedAt"))),
