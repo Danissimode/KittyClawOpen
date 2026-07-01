@@ -71,6 +71,9 @@ builder.Services.AddSingleton(ticketSlotStore);
 // Auto-run deduplication store (persistent idempotency)
 builder.Services.AddSingleton<AutoRunDeduplicationStore>(sp => 
     new AutoRunDeduplicationStore(dataDir, sp.GetRequiredService<ILogger<AutoRunDeduplicationStore>>()));
+// Process Event Ledger (Health Center)
+builder.Services.AddSingleton<ProcessEventStore>(sp =>
+    new ProcessEventStore(dataDir, sp.GetRequiredService<ILogger<ProcessEventStore>>()));
 // Cap concurrent claude subprocesses across all projects (chats bypass). Override with the
 // KITTYCLAW_MAX_CONCURRENT_AGENTS env var if 3 is too tight or too loose for the host.
 var maxConcurrent = int.TryParse(Environment.GetEnvironmentVariable("KITTYCLAW_MAX_CONCURRENT_AGENTS"), out var mc) && mc > 0 ? mc : 3;

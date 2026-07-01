@@ -1,0 +1,243 @@
+@page "/health-center"
+@page "/health-center/{ProjectSlug}"
+@using KittyClaw.Core.Automation.Health
+@inject ProcessEventStore EventStore
+@inject ILogger<HealthCenter> Logger
+@rendermode InteractiveServer
+
+<div class="health-center">
+    <div class="health-header">
+        <h1>Health Center</h1>
+        <div class="health-actions">
+            <select @bind="_selectedCategory" class="input" style="width: auto">
+                <option value="">All Categories</option>
+                <option value="runner">Runner</option>
+                <option value="watchdog">Watchdog</option>
+                <option value="system">System</option>
+                <option value="quota">Quota</option>
+                <option value="scheduler">Scheduler</option>
+                <option value="opencode">OpenCode</option>
+            </select>
+            <select @bind="_selectedLevel" class="input" style="width: auto">
+                <option value="">All Levels</option>
+                <option value="critical">Critical</option>
+                <option value="error">Error</option>
+                <option value="warning">Warning</option>
+                <option value="needs_human">Needs Human</option>
+                <option value="info">Info</option>
+            </select>
+            <button class="btn btn-secondary" @onclick="RefreshEvents">Refresh</button>
+        </div>
+    </div>
+
+    @if (_overview != null)
+    {
+        <div class="health-overview">
+            <div class="overview-card @(overviewHasCritical ? "critical" : "")">
+                <div class="overview-count">@_overview.OpenCount</div>
+                <div class="overview-label">Open Issues</div>
+            </div>
+            <div class="overview-card @(_overview.CriticalCount > 0 ? "critical" : "")">
+                <div class="overview-count">@_overview.CriticalCount</div>
+                <div class="overview-label">Critical</div>
+            </div>
+            <div class="overview-card">
+                <div class="overview-count">@_overview.WarningCount</div>
+                <div class="overview-label">Warnings</div>
+            </div>
+            <div class="overview-card">
+                <div class="overview-count">@_overview.NeedsHumanCount</div>
+                <div class="overview-label">Needs Action</div>
+            </div>
+        </div>
+    }
+
+    <div class="health-tabs">
+        <button class="tab @(_activeTab == "all" ? "active" : "")" @onclick='() => SetTab("all")'>All</button>
+        <button class="tab @(_activeTab == "failures" ? "active" : "")" @onclick='() => SetTab("failures")'>Failures</button>
+        <button class="tab @(_activeTab == "watchdogs" ? "active" : "")" @onclick='() => SetTab("watchdogs")'>Watchdogs</button>
+        <button class="tab @(_activeTab == "system" ? "active" : "")" @onclick='() => SetTab("system")'>System</button>
+        <button class="tab @(_activeTab == "resolved" ? "active" : "")" @onclick='() => SetTab("resolved")'>Resolved</button>
+    </div>
+
+    <div class="health-events">
+        @if (_loading)
+        {
+            <div class="loading">Loading events...</div>
+        }
+        else if (_events.Count == 0)
+        {
+            <div class="empty-state">
+                <div class="empty-icon">✓</div>
+                <div class="empty-title">No issues found</div>
+                <div class="empty-desc">All systems operating normally.</div>
+            </div>
+        }
+        else
+        {
+            @foreach (var evt in _events)
+            {
+                <div class="event-card @evt.Level @evt.Status" @onclick="() => SelectEvent(evt)">
+                    <div class="event-header">
+                        <span class="event-level @evt.Level">@GetLevelIcon(evt.Level) @evt.Level</span>
+                        <span class="event-category">@evt.Category</span>
+                        <span class="event-time">@FormatTime(evt.CreatedAt)</span>
+                    </div>
+                    <div class="event-title">@evt.Title</div>
+                    @if (!string.IsNullOrEmpty(evt.Message))
+                    {
+                        <div class="event-message">@evt.Message</div>
+                    }
+                    <div class="event-meta">
+                        @if (evt.TicketId.HasValue)
+                        {
+                            <span class="meta-badge">Ticket #@evt.TicketId</span>
+                        }
+                        @if (!string.IsNullOrEmpty(evt.AgentId))
+                        {
+                            <span class="meta-badge">@evt.AgentId</span>
+                        }
+                        @if (!string.IsNullOrEmpty(evt.Provider))
+                        {
+                            <span class="meta-badge">@evt.Provider</span>
+                        }
+                        <span class="meta-source">via @evt.Source</span>
+                    </div>
+                    <div class="event-actions">
+                        @if (evt.Status == "open")
+                        {
+                            <button class="btn btn-sm btn-secondary" @onclick="() => AcknowledgeEvent(evt)">Acknowledge</button>
+                            <button class="btn btn-sm btn-primary" @onclick="() => ResolveEvent(evt)">Resolve</button>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? ProjectSlug { get; set; }
+    
+    private string _activeTab = "all";
+    private string _selectedCategory = "";
+    private string _selectedLevel = "";
+    private bool _loading = true;
+    private List<ProcessEvent> _events = new();
+    private ProcessEvent? _selectedEvent;
+    private OverviewStats? _overview;
+    private bool overviewHasCritical => _overview?.CriticalCount > 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshEvents();
+    }
+
+    private async Task RefreshEvents()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        var slug = ProjectSlug ?? "default";
+        
+        try
+        {
+            _events = (await EventStore.RecentAsync(slug, 100)).ToList();
+            
+            // Apply filters
+            if (!string.IsNullOrEmpty(_selectedCategory))
+                _events = _events.Where(e => e.Category == _selectedCategory).ToList();
+            if (!string.IsNullOrEmpty(_selectedLevel))
+                _events = _events.Where(e => e.Level == _selectedLevel).ToList();
+            
+            // Apply tab filter
+            _activeTab = _activeTab switch
+            {
+                "failures" => "failures",
+                "watchdogs" => "watchdogs",
+                "system" => "system",
+                "resolved" => "resolved",
+                _ => "all"
+            };
+            
+            if (_activeTab == "resolved")
+                _events = _events.Where(e => e.Status == "resolved").ToList();
+            else if (_activeTab != "all")
+                _events = _events.Where(e => e.Status == "open" && GetTabCategory(e) == _activeTab).ToList();
+            else
+                _events = _events.Where(e => e.Status == "open").ToList();
+
+            // Overview stats
+            var allEvents = await EventStore.RecentAsync(slug, 1000);
+            var openEvents = allEvents.Where(e => e.Status == "open").ToList();
+            _overview = new OverviewStats
+            {
+                OpenCount = openEvents.Count,
+                CriticalCount = openEvents.Count(e => e.Level == "critical"),
+                WarningCount = openEvents.Count(e => e.Level == "warning"),
+                NeedsHumanCount = openEvents.Count(e => e.Level == "needs_human")
+            };
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load health events");
+        }
+
+        _loading = false;
+    }
+
+    private void SetTab(string tab)
+    {
+        _activeTab = tab;
+        _ = RefreshEvents();
+    }
+
+    private void SelectEvent(ProcessEvent evt) => _selectedEvent = evt;
+
+    private async Task AcknowledgeEvent(ProcessEvent evt)
+    {
+        await EventStore.AcknowledgeAsync(evt.ProjectSlug, evt.Id);
+        await RefreshEvents();
+    }
+
+    private async Task ResolveEvent(ProcessEvent evt)
+    {
+        await EventStore.ResolveAsync(evt.ProjectSlug, evt.Id, "manual", "owner");
+        await RefreshEvents();
+    }
+
+    private string GetTabCategory(ProcessEvent evt) => evt.Category switch
+    {
+        "runner" or "failure" => "failures",
+        "watchdog" => "watchdogs",
+        "system" or "storage" or "security" => "system",
+        _ => "all"
+    };
+
+    private string GetLevelIcon(string level) => level switch
+    {
+        "critical" => "🔴",
+        "error" => "❌",
+        "warning" => "⚠️",
+        "needs_human" => "👤",
+        "info" => "ℹ️",
+        _ => "•"
+    };
+
+    private string FormatTime(DateTimeOffset time)
+    {
+        var diff = DateTimeOffset.UtcNow - time;
+        if (diff.TotalMinutes < 1) return "just now";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
+        return time.ToString("MMM dd HH:mm");
+    }
+
+    private sealed class OverviewStats
+    {
+        public int OpenCount { get; set; }
+        public int CriticalCount { get; set; }
+        public int WarningCount { get; set; }
+        public int NeedsHumanCount { get; set; }
+    }
+}
