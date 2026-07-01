@@ -66,6 +66,40 @@ public class Ticket
     
     /// <summary>Has active run in subtree</summary>
     public bool SubtreeHasActiveRun { get; set; }
+    
+    // ── Recursive Decomposition ─────────────────────────────────────────
+    /// <summary>Whether this card has children (denormalized)</summary>
+    public bool HasChildren { get; set; }
+    
+    /// <summary>Container mode: executable, container, orchestrator</summary>
+    public string ContainerMode { get; set; } = "executable";
+    
+    /// <summary>Completion policy: manual, all_required_children_done, all_required_leaf_tasks_done, all_children_reviewed</summary>
+    public string CompletionPolicy { get; set; } = "manual";
+    
+    /// <summary>How this card was decomposed: manual, planner_agent, checklist_conversion, template, import</summary>
+    public string? SplitOrigin { get; set; }
+    
+    /// <summary>Who decomposed this card</summary>
+    public string? DecomposedBy { get; set; }
+    
+    /// <summary>When this card was decomposed</summary>
+    public DateTime? DecomposedAt { get; set; }
+    
+    /// <summary>Total leaf tasks in subtree (denormalized)</summary>
+    public int LeafTaskCount { get; set; }
+    
+    /// <summary>Completed leaf tasks (denormalized)</summary>
+    public int LeafTasksDoneCount { get; set; }
+    
+    /// <summary>Whether this card is marked as optional (skippable)</summary>
+    public bool IsOptional { get; set; }
+    
+    /// <summary>Whether this card is cancelled/skipped</summary>
+    public bool IsCancelled { get; set; }
+    
+    /// <summary>Reason for cancellation/skip</summary>
+    public string? CancelReason { get; set; }
 
     // ── Plan workflow ───────────────────────────────────────────────────
     /// <summary>Current plan status: none, drafting, awaiting-approval, approved, rejected.</summary>

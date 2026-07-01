@@ -148,6 +148,62 @@ public static class EndpointsTree
         })
         .WithName("CreateParallelGroup")
         .WithDescription("Create a parallel execution group");
+
+        // ── Decomposition ───────────────────────────────────────────────
+        group.MapGet("/projects/{slug}/tickets/{ticketId}/can-decompose", async (
+            string slug, int ticketId, DecompositionService decomposition) =>
+        {
+            var (canDecompose, reason) = await decomposition.CanDecomposeAsync(slug, ticketId);
+            return Results.Ok(new { canDecompose, reason });
+        })
+        .WithName("CanDecompose")
+        .WithDescription("Check if a ticket can be decomposed");
+
+        group.MapPost("/projects/{slug}/tickets/{ticketId}/decompose/preview", async (
+            string slug, int ticketId,
+            [FromBody] DecompositionRequest request,
+            DecompositionService decomposition) =>
+        {
+            var preview = await decomposition.PreviewDecompositionAsync(slug, ticketId, request);
+            return Results.Ok(preview);
+        })
+        .WithName("PreviewDecomposition")
+        .WithDescription("Preview decomposition without applying");
+
+        group.MapPost("/projects/{slug}/tickets/{ticketId}/decompose/apply", async (
+            string slug, int ticketId,
+            [FromBody] DecompositionApplyRequest request,
+            DecompositionService decomposition) =>
+        {
+            var preview = await decomposition.PreviewDecompositionAsync(slug, ticketId, request.Request);
+            if (!preview.IsValid)
+                return Results.BadRequest(new { error = preview.RejectionReason });
+
+            var result = await decomposition.ApplyDecompositionAsync(slug, ticketId, preview, request.DecomposedBy);
+            return result.Success
+                ? Results.Ok(result)
+                : Results.BadRequest(new { error = result.Error });
+        })
+        .WithName("ApplyDecomposition")
+        .WithDescription("Apply decomposition and create child cards");
+
+        group.MapGet("/projects/{slug}/tickets/{ticketId}/leaves", async (
+            string slug, int ticketId, DecompositionService decomposition) =>
+        {
+            var leaves = await decomposition.GetLeafTasksAsync(slug, ticketId);
+            return Results.Ok(leaves);
+        })
+        .WithName("GetLeafTasks")
+        .WithDescription("Get all leaf tasks in subtree");
+
+        group.MapGet("/projects/{slug}/tickets/{ticketId}/leaf-progress", async (
+            string slug, int ticketId, DecompositionService decomposition) =>
+        {
+            var progress = await decomposition.CalculateLeafProgressAsync(slug, ticketId);
+            return Results.Ok(progress);
+        })
+        .WithName("GetLeafProgress")
+        .WithDescription("Get leaf task progress for a container");
     }
 
     public record ReparentRequest(int? NewParentId);
@@ -164,5 +220,9 @@ public static class EndpointsTree
         string? JoinPolicy,
         int? MaxConcurrency,
         int? OnCompleteTicketId
+    );
+    public record DecompositionApplyRequest(
+        DecompositionRequest Request,
+        string? DecomposedBy
     );
 }

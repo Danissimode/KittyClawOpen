@@ -50,6 +50,7 @@ builder.Services.AddSingleton<DashboardService>();
 builder.Services.AddSingleton<AgentsTemplateService>();
 builder.Services.AddSingleton<TreeService>();
 builder.Services.AddSingleton<DependencyStore>();
+builder.Services.AddSingleton<DecompositionService>();
 builder.Services.AddScoped<KittyClaw.Web.Services.BoardFilterState>();
 builder.Services.AddScoped<KittyClaw.Web.Services.BoardSortState>();
 builder.Services.AddSingleton<SettingsService>();
@@ -147,7 +148,8 @@ builder.Services.AddSingleton<OpenCodeRunner>(sp =>
         sp.GetRequiredService<OpenCodeConfig>(),
         sp.GetRequiredService<AgentRunRegistry>(),
         sp.GetRequiredService<ILogger<OpenCodeRunner>>(),
-        sp.GetService<IProviderModelCatalog>()
+        sp.GetService<IProviderModelCatalog>(),
+        sp.GetService<IHttpClientFactory>()
     ));
 builder.Services.AddSingleton<IWorktreeService, WorktreeService>();
 
