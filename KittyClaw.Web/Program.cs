@@ -51,6 +51,9 @@ builder.Services.AddSingleton<AgentsTemplateService>();
 builder.Services.AddSingleton<TreeService>();
 builder.Services.AddSingleton<DependencyStore>();
 builder.Services.AddSingleton<DecompositionService>();
+builder.Services.AddSingleton<CommandHubService>(sp =>
+    new CommandHubService(dataDir, sp.GetRequiredService<ILogger<CommandHubService>>()));
+builder.Services.AddSingleton<CommandParser>();
 builder.Services.AddScoped<KittyClaw.Web.Services.BoardFilterState>();
 builder.Services.AddScoped<KittyClaw.Web.Services.BoardSortState>();
 builder.Services.AddSingleton<SettingsService>();
