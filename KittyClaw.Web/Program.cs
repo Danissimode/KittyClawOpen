@@ -54,6 +54,8 @@ builder.Services.AddSingleton<DecompositionService>();
 builder.Services.AddSingleton<CommandHubService>(sp =>
     new CommandHubService(dataDir, sp.GetRequiredService<ILogger<CommandHubService>>()));
 builder.Services.AddSingleton<CommandParser>();
+builder.Services.AddSingleton<TeamRoleStore>(sp =>
+    new TeamRoleStore(dataDir, sp.GetRequiredService<ILogger<TeamRoleStore>>()));
 builder.Services.AddScoped<KittyClaw.Web.Services.BoardFilterState>();
 builder.Services.AddScoped<KittyClaw.Web.Services.BoardSortState>();
 builder.Services.AddSingleton<SettingsService>();

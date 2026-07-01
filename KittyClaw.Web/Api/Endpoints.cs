@@ -33,6 +33,7 @@ public static partial class Endpoints
         app.MapHealthEndpoints();
         app.MapTreeEndpoints();
         app.MapCommandHubEndpoints();
+        app.MapTeamRoleEndpoints();
 
         // SSE endpoint for real-time board updates across all clients
         api.MapGet("/projects/{slug}/events", async (string slug, BoardUpdateNotifier notifier, HttpContext ctx, CancellationToken ct) =>
