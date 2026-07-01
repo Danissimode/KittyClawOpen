@@ -46,6 +46,14 @@ public class Ticket
     /// <summary>Optional forbidden paths for this ticket (comma-separated glob patterns).</summary>
     public string? ForbiddenPaths { get; set; }
 
+    // ── Execution slot assignment (control plane) ───────────────────────
+    /// <summary>Which execution slot this ticket is assigned to (e.g., "programmer-1", "reviewer").</summary>
+    public string? AssignedSlotId { get; set; }
+    /// <summary>Optional override model profile for this ticket (takes precedence over slot's default).</summary>
+    public string? OverrideModelProfileId { get; set; }
+    /// <summary>If true, prevent auto-fallback from moving this ticket to a different model.</summary>
+    public bool LockExecutor { get; set; }
+
     public List<Comment> Comments { get; set; } = [];
     public List<ActivityEntry> Activities { get; set; } = [];
     public List<Label> Labels { get; set; } = [];
