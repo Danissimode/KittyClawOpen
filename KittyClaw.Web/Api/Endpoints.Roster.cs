@@ -152,9 +152,9 @@ public static class EndpointsRoster
             // TODO: Load profiles from config
 
             var resolver = new ExecutionResolver(
-                store.Slots.ToDictionary(s => s.Key),
-                store.Presets.ToDictionary(p => p.Key),
-                store.Fallbacks.ToDictionary(f => f.Key),
+                store.Slots.ToDictionary(s => s.Key, s => s.Value),
+                store.Presets.ToDictionary(p => p.Key, p => p.Value),
+                store.Fallbacks.ToDictionary(f => f.Key, f => f.Value),
                 profiles,
                 store.ActivePresetId);
 

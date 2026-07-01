@@ -9,6 +9,7 @@ using KittyClaw.Core.TeamChat;
 using KittyClaw.Web.Api;
 using KittyClaw.Web.Components;
 using KittyClaw.Web.Services;
+using Microsoft.AspNetCore.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -109,6 +110,20 @@ builder.Services.AddSingleton<CostTracker>();
 builder.Services.AddSingleton<TokenBudgetService>();
 // API token authentication for IDE/integration access.
 builder.Services.AddSingleton<ApiTokenService>();
+// Register the custom authentication handler and wire up the "ApiToken" policy
+// so that .RequireAuthorization("ApiToken") on IDE endpoints actually enforces
+// Bearer-token validation instead of being silently ignored.
+builder.Services.AddAuthentication("ApiToken")
+    .AddScheme<AuthenticationSchemeOptions, ApiTokenAuthenticationHandler>(
+        "ApiToken", _ => { });
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("ApiToken", policy =>
+    {
+        policy.AuthenticationSchemes.Add("ApiToken");
+        policy.RequireAuthenticatedUser();
+    });
+});
 
 // Zone A: Core extension points (generic, not OpenCode-specific)
 builder.Services.AddSingleton<ITicketExecutionMetadataStore, TicketExecutionMetadataStore>();
@@ -257,6 +272,11 @@ app.UseStaticFiles(new Microsoft.AspNetCore.Builder.StaticFileOptions
 });
 
 app.UseAntiforgery();
+
+// Authentication & Authorization must precede CORS + endpoint mapping
+// so that the ApiToken policy is evaluated for every protected endpoint.
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseCors("LocalOnly");
 app.MapOpenApi();

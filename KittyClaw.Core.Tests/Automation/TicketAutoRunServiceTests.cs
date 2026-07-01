@@ -17,6 +17,7 @@ public sealed class TicketAutoRunServiceTests : IDisposable
     private readonly FailureLogStore _failures;
     private readonly AgentRunRegistry _runRegistry;
     private readonly TestRunnerRegistry _registry;
+    private readonly AutoRunDeduplicationStore _dedupStore;
     private readonly TicketAutoRunService _svc;
 
     public TicketAutoRunServiceTests()
@@ -28,11 +29,12 @@ public sealed class TicketAutoRunServiceTests : IDisposable
         _failures = new FailureLogStore(_tmp);
         _runRegistry = new AgentRunRegistry();
         _registry = new TestRunnerRegistry();
+        _dedupStore = new AutoRunDeduplicationStore(_tmp);
 
         _svc = new TicketAutoRunService(
             _tickets, _projects, _registry, _runRegistry,
             metadataStore: null, worktreeService: null, policyService: null,
-            failures: _failures, logger: null);
+            failures: _failures, dedupStore: _dedupStore, logger: null);
 
         // Create a test project
         _projects.CreateProjectAsync("test-proj").Wait();

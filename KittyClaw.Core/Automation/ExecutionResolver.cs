@@ -169,7 +169,7 @@ public class ExecutionResolver
         {
             AssignedSlotId = original.AssignedSlotId,
             ResolvedAgent = original.ResolvedAgent,
-            ResolvedModel = nextProfile.Model,
+            ResolvedModel = nextProfile.OpencodeModel ?? nextProfile.Model,
             ModelProfileId = nextProfileId,
             RosterPresetId = original.RosterPresetId,
             FallbackPolicyId = original.FallbackPolicyId,

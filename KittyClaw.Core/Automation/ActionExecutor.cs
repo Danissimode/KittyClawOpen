@@ -464,7 +464,7 @@ internal sealed partial class ActionExecutor
             }
         }
 
-        var prompt = _promptBuilder.BuildPrompt(new AgentRunRequest(
+        var prompt = _promptBuilder.BuildPrompt(new Runtimes.AgentRunRequest(
             ProjectSlug: rt.Slug,
             WorkspacePath: rt.Workspace!,
             TicketId: firing.TicketId,
@@ -522,17 +522,51 @@ internal sealed partial class ActionExecutor
             // Roster model takes precedence over default model
             if (!string.IsNullOrEmpty(rosterResolved.ResolvedModel))
             {
-                runtimeConfig = runtimeConfig with { Model = rosterResolved.ResolvedModel };
+                runtimeConfig = new AgentRuntimeConfig
+                {
+                    Id = runtimeConfig.Id,
+                    Enabled = runtimeConfig.Enabled,
+                    Command = runtimeConfig.Command,
+                    Args = runtimeConfig.Args,
+                    PromptMode = runtimeConfig.PromptMode,
+                    TimeoutSeconds = runtimeConfig.TimeoutSeconds,
+                    Experimental = runtimeConfig.Experimental,
+                    WorkingDirectoryOverride = runtimeConfig.WorkingDirectoryOverride,
+                    Model = rosterResolved.ResolvedModel,
+                    Agent = runtimeConfig.Agent,
+                    OutputFormat = runtimeConfig.OutputFormat,
+                    DangerouslySkipPermissions = runtimeConfig.DangerouslySkipPermissions,
+                    Environment = runtimeConfig.Environment,
+                    MaxTurns = runtimeConfig.MaxTurns,
+                    ConcurrencyGroup = runtimeConfig.ConcurrencyGroup
+                };
             }
             
             // Roster agent takes precedence if explicitly resolved
             if (!string.IsNullOrEmpty(rosterResolved.ResolvedAgent))
             {
-                runtimeConfig = runtimeConfig with { Agent = rosterResolved.ResolvedAgent };
+                runtimeConfig = new AgentRuntimeConfig
+                {
+                    Id = runtimeConfig.Id,
+                    Enabled = runtimeConfig.Enabled,
+                    Command = runtimeConfig.Command,
+                    Args = runtimeConfig.Args,
+                    PromptMode = runtimeConfig.PromptMode,
+                    TimeoutSeconds = runtimeConfig.TimeoutSeconds,
+                    Experimental = runtimeConfig.Experimental,
+                    WorkingDirectoryOverride = runtimeConfig.WorkingDirectoryOverride,
+                    Model = runtimeConfig.Model,
+                    Agent = rosterResolved.ResolvedAgent,
+                    OutputFormat = runtimeConfig.OutputFormat,
+                    DangerouslySkipPermissions = runtimeConfig.DangerouslySkipPermissions,
+                    Environment = runtimeConfig.Environment,
+                    MaxTurns = runtimeConfig.MaxTurns,
+                    ConcurrencyGroup = runtimeConfig.ConcurrencyGroup
+                };
             }
         }
 
-        var request = new AgentRunRequest(
+        var request = new Runtimes.AgentRunRequest(
             ProjectSlug: rt.Slug,
             WorkspacePath: rt.Workspace!,
             TicketId: firing.TicketId,
@@ -567,7 +601,7 @@ internal sealed partial class ActionExecutor
             ModelProfileId = rosterResolved?.ModelProfileId ?? modelProfileId,
             Model = rosterResolved?.ResolvedModel,
             // ── Control Plane: Store roster resolution snapshot ──
-            ExecutionMetadata = rosterResolved is not null ? new ExecutionMetadata
+            ExecutionMetadata = rosterResolved is not null ? new Runners.ExecutionMetadata
             {
                 Mode = runtimeConfig.Id,
                 Runner = runtimeId,
@@ -1005,7 +1039,7 @@ internal sealed partial class ActionExecutor
             var modelProfileConfig = config.ModelProfiles.TryGetValue(modelProfileId, out var mpc) ? mpc : new ModelProfileConfig { Id = modelProfileId };
 
             var runId = Guid.NewGuid().ToString("N");
-            var request = new AgentRunRequest(
+        var request = new Runtimes.AgentRunRequest(
                 ProjectSlug: rt.Slug,
                 WorkspacePath: rt.Workspace!,
                 TicketId: null,

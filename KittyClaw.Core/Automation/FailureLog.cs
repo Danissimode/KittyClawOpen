@@ -36,7 +36,7 @@ public sealed class FailureLogEntry
 {
     public string Id { get; init; } = Guid.NewGuid().ToString("N");
     public required string ProjectSlug { get; init; }
-    public required int TicketId { get; init }
+    public required int TicketId { get; init; }
     public required string Kind { get; init; }
     public required string Message { get; init; }
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
