@@ -43,6 +43,7 @@ public sealed class TicketAutoRunService : IHostedService, IDisposable
     private readonly IWorktreeService? _worktreeService;
     private readonly IExecutionPolicyService? _policyService;
     private readonly FailureLogStore _failures;
+    private readonly AutoRunDeduplicationStore _dedupStore;
     private readonly ILogger<TicketAutoRunService>? _logger;
 
     private readonly Channel<(string ProjectSlug, int TicketId, string From, string To)> _queue =
@@ -63,6 +64,7 @@ public sealed class TicketAutoRunService : IHostedService, IDisposable
         IWorktreeService? worktreeService,
         IExecutionPolicyService? policyService,
         FailureLogStore failures,
+        AutoRunDeduplicationStore dedupStore,
         ILogger<TicketAutoRunService>? logger)
     {
         _tickets = tickets;
@@ -73,6 +75,7 @@ public sealed class TicketAutoRunService : IHostedService, IDisposable
         _worktreeService = worktreeService;
         _policyService = policyService;
         _failures = failures;
+        _dedupStore = dedupStore;
         _logger = logger;
     }
 
@@ -125,7 +128,28 @@ public sealed class TicketAutoRunService : IHostedService, IDisposable
         _logger?.LogInformation("TicketAutoRunService: processing transition #{Id} {From} → {To}",
             ticketId, from, to);
 
-        // 1. No-duplicate check with time-based suppression
+        // Generate trigger fingerprint for deduplication
+        var triggerFingerprint = $"{projectSlug}:{ticketId}:status-change:{from}->{to}";
+
+        // 0. Persistent idempotency guard: try to acquire lock
+        var lockResult = await _dedupStore.TryAcquireLockAsync(
+            projectSlug,
+            ticketId,
+            triggerType: "status-change",
+            triggerFingerprint: triggerFingerprint,
+            targetStatus: to,
+            ttl: TimeSpan.FromMinutes(5),
+            ct: ct);
+
+        if (lockResult is not null)
+        {
+            // Lock already exists - duplicate detected
+            _logger?.LogInformation("TicketAutoRunService: ticket #{Id} suppressed by persistent dedup lock {LockId}", 
+                ticketId, lockResult.Id);
+            return;
+        }
+
+        // 1. No-duplicate check with time-based suppression (in-memory fast path)
         if (_runRegistry.ActiveForTicket(projectSlug, ticketId).Any())
         {
             var dedupKey = $"{projectSlug}:{ticketId}";
